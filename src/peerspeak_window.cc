@@ -14,6 +14,7 @@ PeerspeakWindow::PeerspeakWindow(BaseObjectType *cobject, const Glib::RefPtr<Gtk
 
     addChat("This is a test message", "Test");
     addChat("This is a message sent by the user");
+    addChat("Another <s>test message</s> sent by someone else", "Tast");
 }
 
 void PeerspeakWindow::initWidgets()
@@ -36,6 +37,7 @@ void PeerspeakWindow::addChat(std::string msg, std::string user)
 {
     auto label = std::make_unique<Gtk::Label>();
     label->set_markup("<b>" + user + "</b>: " + msg);
+    label->set_halign(Gtk::Align::ALIGN_START);
     label->set_xalign(0);
     label->set_line_wrap(true);
     label->set_selectable(true);
@@ -47,6 +49,7 @@ void PeerspeakWindow::addChat(std::string msg, std::string user)
 void PeerspeakWindow::addChat(std::string msg)
 {
     auto label = std::make_unique<Gtk::Label>(msg);
+    label->set_halign(Gtk::Align::ALIGN_END);
     label->set_xalign(1);
     label->set_line_wrap(true);
     label->set_selectable(true);

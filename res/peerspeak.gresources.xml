@@ -2,5 +2,6 @@
 <gresources>
     <gresource prefix="/us/laelath/peerspeak">
         <file preprocess="xml-stripblanks">peerspeak_ui.glade</file>
+        <file>peerspeak_style.css</file>
     </gresource>
 </gresources>

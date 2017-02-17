@@ -10,7 +10,7 @@ execute_process (
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/resources.c
-    DEPENDS res/peerspeak.gresources.xml res/peerspeak_ui.glade
+    DEPENDS res/peerspeak.gresources.xml res/peerspeak_ui.glade res/peerspeak_style.css
     COMMAND ${GLIB_COMPILE_RESOURCES} res/peerspeak.gresources.xml --target=${CMAKE_CURRENT_BINARY_DIR}/resources.c --sourcedir=${CMAKE_CURRENT_SOURCE_DIR}/res --generate-source)
 
 include_directories (${GTKMM_INCLUDE_DIRS})
