@@ -17,15 +17,21 @@ include_directories (${GTKMM_INCLUDE_DIRS})
 link_directories (${GTKMM_LIBRARY_DIRS})
 add_definitions (${GTKMM_CFLAGS_OTHER})
 
+find_package (Threads)
+
+include_directories (include)
+
 set (
     SOURCES
     src/main.cc
     src/peerspeak_window.cc
+    src/connection_handler.cc
+    src/connection.cc
     ${CMAKE_CURRENT_BINARY_DIR}/resources.c)
 
 add_executable (peerspeak ${SOURCES})
 
-target_link_libraries (peerspeak ${GTKMM_LIBRARIES})
+target_link_libraries (peerspeak ${CMAKE_THREAD_LIBS_INIT} ${GTKMM_LIBRARIES})
 set_property (TARGET peerspeak PROPERTY CXX_STANDARD 14)
 
 install (TARGETS peerspeak DESTINATION bin)
