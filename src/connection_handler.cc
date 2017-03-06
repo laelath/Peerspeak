@@ -20,15 +20,13 @@ ConnectionHandler::ConnectionHandler(asio::io_service& io_service, asio::ip::tcp
 {
     socket.connect(end);
     uint64_t temp_id = htonll(id);
-    queue_write_message(OPEN, asio::streambuf::const_buffers_type(&temp_id, sizeof(temp_id)));
+    queue_write_message(OPEN, asio::buffer(&temp_id, sizeof(temp_id)));
     asio::async_read_until(socket, in_buf, '\n', std::bind(&ConnectionHandler::read_callback, this,
             std::_1, std::_2));
-    uint64_t other_id = htonll(static_cast<uint64_t>(12345123));
-    queue_write_message(OPEN, asio::streambuf::const_buffers_type(&other_id, sizeof(other_id)));
 }
 
 void ConnectionHandler::queue_write_message(MessageType type,
-    const asio::streambuf::const_buffers_type& buf)
+    const asio::const_buffer& buf)
 {
     switch (type) {
         case CONNECT:
@@ -52,7 +50,7 @@ void ConnectionHandler::queue_write_message(MessageType type,
 
     std::string header = get_message_string(type) + " "
         + std::to_string(asio::buffer_size(buf)) + "\n";
-    std::vector<asio::streambuf::const_buffers_type> data;
+    std::vector<asio::const_buffer> data;
     data.push_back(asio::buffer(header));
     data.push_back(buf);
     asio::async_write(socket, data, asio::transfer_all(),
@@ -78,54 +76,92 @@ void ConnectionHandler::read_callback(const asio::error_code& ec, size_t num)
             return;
         }
 
+        std::function<void(std::istream&)> read_func;
+
+        switch (type) {
+            case CONNECT:
+                if (bytes != 6)
+                    return;
+                read_func = std::bind(&ConnectionHandler::read_connect, this, std::_1);
+                break;
+            case OPEN:
+                if (bytes != 8)
+                    return;
+                read_func = std::bind(&ConnectionHandler::read_open, this, std::_1);
+                break;
+            case ERROR:
+                read_func = std::bind(&ConnectionHandler::read_error, this, std::_1);
+                break;
+            case ACCEPT:
+            case CHAT:
+            case INVALID:
+                return;
+        }
+
         size_t read = 0;
         if (bytes > in_buf.size())
             read = bytes - in_buf.size();
 
-        auto read_func = [this, type, bytes](const asio::error_code& ec, size_t num) {
-            std::istream is(&in_buf);
-            if (type == CONNECT) {
-                // TODO IPv6 support
-                if (bytes != 6)
-                    return;
-                uint8_t ip_bytes[4];
-                uint16_t port;
-                is.read(reinterpret_cast<char *>(ip_bytes), 4);
-                is.read(reinterpret_cast<char *>(&port), sizeof(port));
-                port = ntohs(port);
-                asio::ip::address_v4 addr(bytes);
-                asio::ip::tcp::endpoint end(addr, port);
-                // TODO perform NAT punchthrough
-                std::cout << "CONNECT request to " << addr.to_string() << ":" << port << std::endl;
-            } else if (type == OPEN) {
-                if (bytes != 8)
-                    return;
-                uint64_t other_id;
-                is.read(reinterpret_cast<char *>(&other_id), sizeof(other_id));
-                other_id = ntohll(other_id);
-                std::cout << "Incoming OPEN request from " << other_id << std::endl;
-                // TODO show message about incoming request
-            } else if (type == ERROR) {
-                std::string msg(std::istreambuf_iterator<char>(is), {});
-                std::cerr << "Error: " << msg << std::endl;
-            } else
-                return;
-            asio::async_read_until(socket, in_buf, '\n', std::bind(
-                    &ConnectionHandler::read_callback, this, std::_1, std::_2));
-        };
-
-        if (read == 0)
-            read_func(asio::error_code(), 0);
+        if (bytes < in_buf.size())
+            read_buffer(asio::error_code(), 0, read_func);
         else
-            asio::async_read(socket, in_buf, asio::transfer_exactly(read), read_func);
+            asio::async_read(socket, in_buf, asio::transfer_exactly(bytes - in_buf.size()), 
+                std::bind(&ConnectionHandler::read_buffer, this, std::_1, std::_2, read_func));
     } else if (ec != asio::error::eof) {
-        std::cerr << "Error: " << ec.value() << ", " << ec.message() << "." << std::endl;
+        std::cerr << "Asio read error: " << ec.value() << ", " << ec.message() << std::endl;
+    } else {
+        std::cerr << "Critical: lost connection to discovery server" << std::endl;
+    }
+}
+
+void ConnectionHandler::read_buffer(const asio::error_code& ec, size_t num,
+    std::function<void(std::istream&)> func)
+{
+    if (!ec) {
+        std::istream is(&in_buf);
+        func(is);
+        asio::async_read_until(socket, in_buf, '\n', std::bind(&ConnectionHandler::read_callback,
+                this, std::_1, std::_2));
+    } else if (ec != asio::error::eof) {
+        std::cerr << "Asio read error: " << ec.value() << ", " << ec.message() << std::endl;
+    } else {
+        std::cerr << "Critical: lost connection to discovery server" << std::endl;
     }
 }
 
 void ConnectionHandler::write_callback(const asio::error_code& ec, size_t num)
 {
     if (ec && ec != asio::error::eof) {
-        std::cerr << "Error: " << ec.value() << ", " << ec.message() << "." << std::endl;
+        std::cerr << "Asio write error: " << ec.value() << ", " << ec.message() <<  std::endl;
     }
+}
+
+void ConnectionHandler::read_connect(std::istream& is)
+{
+    // TODO IPv6 support
+    std::array<uint8_t, 4> ip_bytes;
+    uint16_t port;
+    is.read(reinterpret_cast<char *>(ip_bytes.data()), ip_bytes.size());
+    is.read(reinterpret_cast<char *>(&port), sizeof(port));
+    port = ntohs(port);
+    asio::ip::address_v4 addr(ip_bytes);
+    asio::ip::tcp::endpoint end(addr, port);
+    // TODO perform NAT punchthrough
+    std::cout << "CONNECT request to " << addr.to_string() << ":" << port << std::endl;
+}
+
+void ConnectionHandler::read_open(std::istream& is)
+{
+    uint64_t other_id;
+    is.read(reinterpret_cast<char *>(&other_id), sizeof(other_id));
+    other_id = ntohll(other_id);
+    std::cout << "OPEN request from " << other_id << std::endl;
+    // TODO show message about incoming request
+}
+
+void ConnectionHandler::read_error(std::istream& is)
+{
+    std::string msg;
+    std::getline(is, msg);
+    std::cerr << "Error: " << msg << std::endl;
 }
