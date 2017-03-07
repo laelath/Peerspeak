@@ -14,12 +14,19 @@ namespace std {
     using namespace placeholders;
 } // namespace std
 
-ConnectionHandler::ConnectionHandler(asio::io_service& io_service, asio::ip::tcp::endpoint end,
+ConnectionHandler::ConnectionHandler(asio::io_service& io_service, asio::ip::tcp::endpoint& end,
                                      uint64_t id)
-    : socket(io_service)
+    : acceptor(io_service),
+      socket(io_service),
+      new_socket(io_service),
+      id(id)
 {
     socket.connect(end);
+    socket.set_option(asio::ip::tcp::socket::reuse_address(true));
     uint64_t temp_id = htonll(id);
+    acceptor.open(socket.local_endpoint().protocol());
+    acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+    acceptor.bind(socket.local_endpoint());
     queue_write_message(OPEN, asio::buffer(&temp_id, sizeof(temp_id)));
     asio::async_read_until(socket, in_buf, '\n', std::bind(&ConnectionHandler::read_callback, this,
                                                            std::_1, std::_2));
@@ -145,9 +152,9 @@ void ConnectionHandler::read_connect(std::istream& is)
     is.read(reinterpret_cast<char *>(&port), sizeof(port));
     port = ntohs(port);
     asio::ip::address_v4 addr(ip_bytes);
-    asio::ip::tcp::endpoint end(addr, port);
-    // TODO perform NAT punchthrough
     std::cout << "CONNECT request to " << addr.to_string() << ":" << port << std::endl;
+    asio::ip::tcp::endpoint remote(addr, port);
+    punchthrough(remote);
 }
 
 void ConnectionHandler::read_open(std::istream& is)
@@ -156,7 +163,10 @@ void ConnectionHandler::read_open(std::istream& is)
     is.read(reinterpret_cast<char *>(&other_id), sizeof(other_id));
     other_id = ntohll(other_id);
     std::cout << "OPEN request from " << other_id << std::endl;
-    // TODO show message about incoming request
+    // TODO show message about incoming request and create way to accept messages
+    // TEMP for testing peer connections easier
+    bool response = true;
+    queue_write_message(ACCEPT, asio::buffer(&response, sizeof(response)));
 }
 
 void ConnectionHandler::read_error(std::istream& is)
@@ -164,4 +174,24 @@ void ConnectionHandler::read_error(std::istream& is)
     std::string msg;
     std::getline(is, msg);
     std::cerr << "Error: " << msg << std::endl;
+}
+
+void ConnectionHandler::punchthrough(asio::ip::tcp::endpoint& remote)
+{
+    auto accept_func = [this](const asio::error_code& ec) {
+        if (!ec) {
+            acceptor.cancel();
+            new_socket.cancel();
+            auto conn = std::make_shared<Connection>(std::move(new_socket), connections);
+            conn->start_connection(id);
+            std::cout << "Punchthrough successful, starting connection..." << std::endl;
+        } else
+            std::cerr << "Punchthrough error " << ec.value() << ", " << ec.message() << std::endl;
+    };
+
+    std::cout << "Starting punchthrough to " << remote.address().to_string() << ":"
+              << remote.port() << std::endl;
+
+    new_socket.async_connect(remote, accept_func);
+    acceptor.async_accept(new_socket, accept_func);
 }

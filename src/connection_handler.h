@@ -5,9 +5,10 @@
 
 #include "connection.h"
 
+// Handles a connection to a discovery server and peer discovery and initiation
 class ConnectionHandler {
 public:
-    ConnectionHandler(asio::io_service& io_service, asio::ip::tcp::endpoint end, uint64_t id);
+    ConnectionHandler(asio::io_service& io_service, asio::ip::tcp::endpoint& end, uint64_t id);
 
     void queue_write_message(MessageType type, const asio::const_buffer& buf);
 
@@ -21,10 +22,16 @@ private:
     void read_open(std::istream& is);
     void read_error(std::istream& is);
 
+    void punchthrough(asio::ip::tcp::endpoint& remote);
+
+    asio::ip::tcp::acceptor acceptor;
     asio::ip::tcp::socket socket;
+    asio::ip::tcp::socket new_socket;
     asio::streambuf in_buf;
 
-    //std::map<uint64_t, std::weak_ptr<Connection>> connections;
+    uint64_t id;
+
+    std::map<uint64_t, std::weak_ptr<Connection>> connections;
 };
 
 #endif // connection_handler_h_INCLUDED

@@ -26,26 +26,33 @@ class Connection
 public:
     // Creates a connection that manages sock and is stored in conns.
     Connection(asio::ip::tcp::socket sock,
-        std::map<uint64_t, std::weak_ptr<Connection>>& conns);
+               std::map<uint64_t, std::weak_ptr<Connection>>& conns);
     ~Connection();
 
     // Get the IP address of the connection
     asio::ip::tcp::endpoint get_endpoint();
 
+    // Starts the connection
+    void start_connection(uint64_t this_id);
+
     // Queues a message to write, checks to make sure it's in the right format.
     void queue_write_message(MessageType type,
-        const asio::streambuf::const_buffers_type& buf);
+                             const asio::const_buffer& buf);
 
 private:
     // Callback for reading messages from socket.
     void read_callback(const asio::error_code& ec, size_t num);
+    void read_buffer(const asio::error_code& ec, size_t num,
+                     std::function<void(std::istream&)> func);
 
     // Callback for writing messages to socket.
     void write_callback(const asio::error_code& ec, size_t num);
 
+    void read_chat(std::istream& is);
+    //void read_connect(std::istream& is);
+
     asio::ip::tcp::socket socket;
     asio::streambuf in_buf;
-    asio::streambuf out_buf;
 
     uint64_t id;
 
