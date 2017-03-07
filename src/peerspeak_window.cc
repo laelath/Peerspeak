@@ -2,7 +2,8 @@
 
 namespace peerspeak {
 
-PeerspeakWindow::PeerspeakWindow(BaseObjectType *cobject, const Glib::RefPtr<Gtk::Builder>& builder)
+PeerspeakWindow::PeerspeakWindow(BaseObjectType *cobject,
+                                 const Glib::RefPtr<Gtk::Builder>& builder)
     : Gtk::ApplicationWindow(cobject),
       builder(builder)
 {

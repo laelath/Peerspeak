@@ -15,18 +15,17 @@ namespace std {
 } // namespace std
 
 ConnectionHandler::ConnectionHandler(asio::io_service& io_service, asio::ip::tcp::endpoint end,
-    uint64_t id)
+                                     uint64_t id)
     : socket(io_service)
 {
     socket.connect(end);
     uint64_t temp_id = htonll(id);
     queue_write_message(OPEN, asio::buffer(&temp_id, sizeof(temp_id)));
     asio::async_read_until(socket, in_buf, '\n', std::bind(&ConnectionHandler::read_callback, this,
-            std::_1, std::_2));
+                                                           std::_1, std::_2));
 }
 
-void ConnectionHandler::queue_write_message(MessageType type,
-    const asio::const_buffer& buf)
+void ConnectionHandler::queue_write_message(MessageType type, const asio::const_buffer& buf)
 {
     switch (type) {
         case CONNECT:
@@ -54,7 +53,7 @@ void ConnectionHandler::queue_write_message(MessageType type,
     data.push_back(asio::buffer(header));
     data.push_back(buf);
     asio::async_write(socket, data, asio::transfer_all(),
-        std::bind(&ConnectionHandler::write_callback, this, std::_1, std::_2));
+                      std::bind(&ConnectionHandler::write_callback, this, std::_1, std::_2));
 }
 
 void ConnectionHandler::read_callback(const asio::error_code& ec, size_t num)
@@ -106,7 +105,8 @@ void ConnectionHandler::read_callback(const asio::error_code& ec, size_t num)
             read_buffer(asio::error_code(), 0, read_func);
         else
             asio::async_read(socket, in_buf, asio::transfer_exactly(bytes - in_buf.size()), 
-                std::bind(&ConnectionHandler::read_buffer, this, std::_1, std::_2, read_func));
+                             std::bind(&ConnectionHandler::read_buffer, this,
+                                       std::_1, std::_2, read_func));
     } else if (ec != asio::error::eof) {
         std::cerr << "Asio read error: " << ec.value() << ", " << ec.message() << std::endl;
     } else {
@@ -115,13 +115,13 @@ void ConnectionHandler::read_callback(const asio::error_code& ec, size_t num)
 }
 
 void ConnectionHandler::read_buffer(const asio::error_code& ec, size_t num,
-    std::function<void(std::istream&)> func)
+                                    std::function<void(std::istream&)> func)
 {
     if (!ec) {
         std::istream is(&in_buf);
         func(is);
         asio::async_read_until(socket, in_buf, '\n', std::bind(&ConnectionHandler::read_callback,
-                this, std::_1, std::_2));
+                                                               this, std::_1, std::_2));
     } else if (ec != asio::error::eof) {
         std::cerr << "Asio read error: " << ec.value() << ", " << ec.message() << std::endl;
     } else {

@@ -29,8 +29,8 @@ int main(int argc, char *argv[])
         auto window = std::unique_ptr<peerspeak::PeerspeakWindow>(window_ptr);
         auto style = Gtk::CssProvider::create();
         style->load_from_resource("/us/laelath/peerspeak/peerspeak_style.css");
-        Gtk::StyleContext::add_provider_for_screen(Gdk::Screen::get_default(),
-            style, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+        Gtk::StyleContext::add_provider_for_screen(Gdk::Screen::get_default(), style,
+                                                   GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
         int status = app->run(*window);
         return status;
     } catch (const Glib::FileError e) {

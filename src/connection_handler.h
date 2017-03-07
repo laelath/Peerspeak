@@ -14,7 +14,7 @@ public:
 private:
     void read_callback(const asio::error_code& ec, size_t num);
     void read_buffer(const asio::error_code& ec, size_t num,
-        std::function<void(std::istream&)> func);
+                     std::function<void(std::istream&)> func);
     void write_callback(const asio::error_code& ec, size_t num);
 
     void read_connect(std::istream& is);
