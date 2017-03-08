@@ -10,9 +10,7 @@
 #define ntohll(x) (x)
 #endif
 
-namespace std {
-    using namespace placeholders;
-} // namespace std
+using namespace std::placeholders;
 
 ConnectionHandler::ConnectionHandler(asio::io_service& io_service, asio::ip::tcp::endpoint& end,
                                      uint64_t id)
@@ -26,9 +24,6 @@ ConnectionHandler::ConnectionHandler(asio::io_service& io_service, asio::ip::tcp
     socket.set_option(asio::ip::tcp::socket::reuse_address(true));
     socket.connect(end);
 
-    std::cout << socket.local_endpoint().address().to_string() << ":"
-              << socket.local_endpoint().port() << std::endl;
-
     conn_sock.open(asio::ip::tcp::v4());
     conn_sock.set_option(asio::ip::tcp::socket::reuse_address(true));
     conn_sock.bind(socket.local_endpoint());
@@ -41,29 +36,29 @@ ConnectionHandler::ConnectionHandler(asio::io_service& io_service, asio::ip::tcp
     uint64_t temp_id = htonll(id);
     queue_write_message(OPEN, asio::buffer(&temp_id, sizeof(temp_id)));
     asio::async_read_until(socket, in_buf, '\n', std::bind(&ConnectionHandler::read_callback, this,
-                                                           std::_1, std::_2));
+                                                           _1, _2));
 }
 
 void ConnectionHandler::queue_write_message(MessageType type, const asio::const_buffer& buf)
 {
     switch (type) {
-        case CONNECT:
-            if (asio::buffer_size(buf) != 4)
-                throw std::invalid_argument("CONNECT expected an IPv4 address");
-            break;
-        case OPEN:
-            if (asio::buffer_size(buf) != 8)
-                throw std::invalid_argument("OPEN expected a uint64_t id");
-            break;
-        case ACCEPT:
-            if (asio::buffer_size(buf) != 1)
-                throw std::invalid_argument("ACCEPT expected a boolean byte");
-            break;
-        case ERROR:
-        case CHAT:
-            break;
-        case INVALID:
-            throw std::invalid_argument("Cannot send INVALID message");
+    case CONNECT:
+        if (asio::buffer_size(buf) != 4)
+            throw std::invalid_argument("CONNECT expected an IPv4 address");
+        break;
+    case OPEN:
+        if (asio::buffer_size(buf) != 8)
+            throw std::invalid_argument("OPEN expected a uint64_t id");
+        break;
+    case ACCEPT:
+        if (asio::buffer_size(buf) != 1)
+            throw std::invalid_argument("ACCEPT expected a boolean byte");
+        break;
+    case ERROR:
+    case CHAT:
+        break;
+    case INVALID:
+        throw std::invalid_argument("Cannot send INVALID message");
     }
 
     std::string header = get_message_string(type) + " "
@@ -72,7 +67,7 @@ void ConnectionHandler::queue_write_message(MessageType type, const asio::const_
     data.push_back(asio::buffer(header));
     data.push_back(buf);
     asio::async_write(socket, data, asio::transfer_all(),
-                      std::bind(&ConnectionHandler::write_callback, this, std::_1, std::_2));
+                      std::bind(&ConnectionHandler::write_callback, this, _1, _2));
 }
 
 void ConnectionHandler::read_callback(const asio::error_code& ec, size_t num)
@@ -97,23 +92,23 @@ void ConnectionHandler::read_callback(const asio::error_code& ec, size_t num)
         std::function<void(std::istream&)> read_func;
 
         switch (type) {
-            case CONNECT:
-                if (bytes != 6)
-                    return;
-                read_func = std::bind(&ConnectionHandler::read_connect, this, std::_1);
-                break;
-            case OPEN:
-                if (bytes != 8)
-                    return;
-                read_func = std::bind(&ConnectionHandler::read_open, this, std::_1);
-                break;
-            case ERROR:
-                read_func = std::bind(&ConnectionHandler::read_error, this, std::_1);
-                break;
-            case ACCEPT:
-            case CHAT:
-            case INVALID:
+        case CONNECT:
+            if (bytes != 6)
                 return;
+            read_func = std::bind(&ConnectionHandler::read_connect, this, _1);
+            break;
+        case OPEN:
+            if (bytes != 8)
+                return;
+            read_func = std::bind(&ConnectionHandler::read_open, this, _1);
+            break;
+        case ERROR:
+            read_func = std::bind(&ConnectionHandler::read_error, this, _1);
+            break;
+        case ACCEPT:
+        case CHAT:
+        case INVALID:
+            return;
         }
 
         size_t read = 0;
@@ -125,7 +120,7 @@ void ConnectionHandler::read_callback(const asio::error_code& ec, size_t num)
         else
             asio::async_read(socket, in_buf, asio::transfer_exactly(bytes - in_buf.size()), 
                              std::bind(&ConnectionHandler::read_buffer, this,
-                                       std::_1, std::_2, read_func));
+                                       _1, _2, read_func));
     } else if (ec != asio::error::eof) {
         std::cerr << "Asio read error: " << ec.value() << ", " << ec.message() << std::endl;
     } else {
@@ -140,7 +135,7 @@ void ConnectionHandler::read_buffer(const asio::error_code& ec, size_t num,
         std::istream is(&in_buf);
         func(is);
         asio::async_read_until(socket, in_buf, '\n', std::bind(&ConnectionHandler::read_callback,
-                                                               this, std::_1, std::_2));
+                                                               this, _1, _2));
     } else if (ec != asio::error::eof) {
         std::cerr << "Asio read error: " << ec.value() << ", " << ec.message() << std::endl;
     } else {
@@ -176,9 +171,6 @@ void ConnectionHandler::read_open(std::istream& is)
     other_id = ntohll(other_id);
     std::cout << "OPEN request from " << other_id << std::endl;
     // TODO show message about incoming request and create way to accept messages
-    // TEMP for testing peer connections easier
-    bool response = true;
-    queue_write_message(ACCEPT, asio::buffer(&response, sizeof(response)));
 }
 
 void ConnectionHandler::read_error(std::istream& is)
@@ -190,26 +182,21 @@ void ConnectionHandler::read_error(std::istream& is)
 
 void ConnectionHandler::punchthrough(asio::ip::tcp::endpoint& remote)
 {
-    // TODO protect against two way connect
     std::cout << "Starting punchthrough to " << remote.address().to_string() << ":"
               << remote.port() << std::endl;
 
-    conn_sock.async_connect(remote, std::bind(&ConnectionHandler::punch_conn_callback, this, std::_1));
-    acceptor.async_accept(acpt_sock, std::bind(&ConnectionHandler::punch_acpt_callback, this, std::_1));
+    conn_sock.async_connect(remote, std::bind(&ConnectionHandler::punch_conn_callback, this, _1));
+    acceptor.async_accept(acpt_sock, std::bind(&ConnectionHandler::punch_acpt_callback, this, _1));
 }
 
 void ConnectionHandler::punch_conn_callback(const asio::error_code& ec)
 {
     if (!ec) {
         acceptor.cancel();
-        auto conn = std::make_shared<Connection>(std::move(conn_sock), connections);
+        auto conn = std::make_shared<Connection>(conn_sock.get_io_service(), std::move(conn_sock),
+                                                 connections);
         std::cout << "Punchthrough successful, starting connection..." << std::endl;
         conn->start_connection(id);
-
-        // Not sure if neccessary
-        // conn_sock.open(socket.local_endpoint().protocol());
-        // conn_sock.set_option(asio::ip::tcp::socket::reuse_address(true));
-        // conn_sock.bind(socket.local_endpoint());
     } else
         std::cerr << "Punchthrough connect error " << ec.value() << ", " << ec.message()
                   << std::endl;
@@ -219,7 +206,8 @@ void ConnectionHandler::punch_acpt_callback(const asio::error_code& ec)
 {
     if (!ec) {
         conn_sock.cancel();
-        auto conn = std::make_shared<Connection>(std::move(acpt_sock), connections);
+        auto conn = std::make_shared<Connection>(acpt_sock.get_io_service(), std::move(acpt_sock),
+                                                 connections);
         std::cout << "Punchthrough successful, starting connection..." << std::endl;
         conn->start_connection(id);
     } else
