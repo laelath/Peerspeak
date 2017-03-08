@@ -18,15 +18,27 @@ ConnectionHandler::ConnectionHandler(asio::io_service& io_service, asio::ip::tcp
                                      uint64_t id)
     : acceptor(io_service),
       socket(io_service),
-      new_socket(io_service),
+      conn_sock(io_service),
+      acpt_sock(io_service),
       id(id)
 {
-    socket.connect(end);
+    socket.open(asio::ip::tcp::v4());
     socket.set_option(asio::ip::tcp::socket::reuse_address(true));
-    uint64_t temp_id = htonll(id);
+    socket.connect(end);
+
+    std::cout << socket.local_endpoint().address().to_string() << ":"
+              << socket.local_endpoint().port() << std::endl;
+
+    conn_sock.open(asio::ip::tcp::v4());
+    conn_sock.set_option(asio::ip::tcp::socket::reuse_address(true));
+    conn_sock.bind(socket.local_endpoint());
+
     acceptor.open(socket.local_endpoint().protocol());
     acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
     acceptor.bind(socket.local_endpoint());
+    acceptor.listen(10);
+
+    uint64_t temp_id = htonll(id);
     queue_write_message(OPEN, asio::buffer(&temp_id, sizeof(temp_id)));
     asio::async_read_until(socket, in_buf, '\n', std::bind(&ConnectionHandler::read_callback, this,
                                                            std::_1, std::_2));
@@ -178,20 +190,39 @@ void ConnectionHandler::read_error(std::istream& is)
 
 void ConnectionHandler::punchthrough(asio::ip::tcp::endpoint& remote)
 {
-    auto accept_func = [this](const asio::error_code& ec) {
-        if (!ec) {
-            acceptor.cancel();
-            new_socket.cancel();
-            auto conn = std::make_shared<Connection>(std::move(new_socket), connections);
-            conn->start_connection(id);
-            std::cout << "Punchthrough successful, starting connection..." << std::endl;
-        } else
-            std::cerr << "Punchthrough error " << ec.value() << ", " << ec.message() << std::endl;
-    };
-
+    // TODO protect against two way connect
     std::cout << "Starting punchthrough to " << remote.address().to_string() << ":"
               << remote.port() << std::endl;
 
-    new_socket.async_connect(remote, accept_func);
-    acceptor.async_accept(new_socket, accept_func);
+    conn_sock.async_connect(remote, std::bind(&ConnectionHandler::punch_conn_callback, this, std::_1));
+    acceptor.async_accept(acpt_sock, std::bind(&ConnectionHandler::punch_acpt_callback, this, std::_1));
+}
+
+void ConnectionHandler::punch_conn_callback(const asio::error_code& ec)
+{
+    if (!ec) {
+        acceptor.cancel();
+        auto conn = std::make_shared<Connection>(std::move(conn_sock), connections);
+        std::cout << "Punchthrough successful, starting connection..." << std::endl;
+        conn->start_connection(id);
+
+        // Not sure if neccessary
+        // conn_sock.open(socket.local_endpoint().protocol());
+        // conn_sock.set_option(asio::ip::tcp::socket::reuse_address(true));
+        // conn_sock.bind(socket.local_endpoint());
+    } else
+        std::cerr << "Punchthrough connect error " << ec.value() << ", " << ec.message()
+                  << std::endl;
+}
+
+void ConnectionHandler::punch_acpt_callback(const asio::error_code& ec)
+{
+    if (!ec) {
+        conn_sock.cancel();
+        auto conn = std::make_shared<Connection>(std::move(acpt_sock), connections);
+        std::cout << "Punchthrough successful, starting connection..." << std::endl;
+        conn->start_connection(id);
+    } else
+        std::cerr << "Punchthrough accept error " << ec.value() << ", " << ec.message()
+                  << std::endl;
 }

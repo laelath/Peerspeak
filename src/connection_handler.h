@@ -23,10 +23,13 @@ private:
     void read_error(std::istream& is);
 
     void punchthrough(asio::ip::tcp::endpoint& remote);
+    void punch_conn_callback(const asio::error_code& ec);
+    void punch_acpt_callback(const asio::error_code& ec);
 
     asio::ip::tcp::acceptor acceptor;
     asio::ip::tcp::socket socket;
-    asio::ip::tcp::socket new_socket;
+    asio::ip::tcp::socket conn_sock;
+    asio::ip::tcp::socket acpt_sock;
     asio::streambuf in_buf;
 
     uint64_t id;
