@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "peerspeak_window.h"
+
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #define htonll(x) ((uint64_t)htonl((x) & 0xFFFFFFFF) << 32) | htonl((x) >> 32)
 #define ntohll(x) ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32)
@@ -172,10 +174,13 @@ void Connection::read_callback(const asio::error_code& ec, size_t num)
             read_func = std::bind(&Connection::read_chat, self, _1);
             break;
         case CONNECT:
-            // TODO will be handled in the future
+            // TODO CONNECT will be handled in the future
         case OPEN:
+            // This might be used with client relays
         case ACCEPT:
+            // Then this would also need to be handled
         case ERROR:
+            // This might have a use later
         case INVALID:
             return;
         }
@@ -216,7 +221,7 @@ void Connection::read_chat(std::istream& is)
     std::string line;
     std::getline(is, line);
     std::cout << "Chat from " << id << ": " << line << std::endl;
-
+    window->recv_chat(id, line);
 }
 
 } // namespace peerspeak

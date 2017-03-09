@@ -3,9 +3,12 @@
 
 #include <memory>
 #include <queue>
+#include <thread>
 #include <vector>
 
 #include <gtkmm.h>
+
+#include "connection_handler.h"
 
 namespace peerspeak {
 
@@ -13,8 +16,8 @@ class ConnectionHandler;
 
 class PeerspeakWindow : public Gtk::ApplicationWindow {
 public:
-    PeerspeakWindow(BaseObjectType *cobject, const Glib::RefPtr<Gtk::Builder>& builder,
-                    ConnectionHandler &handler);
+    PeerspeakWindow(BaseObjectType *cobject, const Glib::RefPtr<Gtk::Builder>& builder);
+    ~PeerspeakWindow();
 
     void recv_open(uint64_t id);
     void recv_chat(uint64_t id, std::string msg);
@@ -26,12 +29,24 @@ private:
     Gtk::Box *chatBox;
     Gtk::Entry *chatEntry;
 
+    Gtk::Dialog *accept_dialog;
+    Gtk::Label *accept_id_label;
+    Gtk::Button *accept_accept_button;
+    Gtk::Button *accept_reject_button;
+
+    Gtk::Dialog *init_dialog;
+    Gtk::Entry *init_id_entry;
+    Gtk::Entry *init_ip_entry;
+    Gtk::Entry *init_port_entry;
+    Gtk::Button *init_apply_button;
+    Gtk::Button *init_cancel_button;
+
     // TODO replace unique_ptr with emplace_back
     std::vector<std::unique_ptr<Gtk::Label>> chatLabels;
 
-    ConnectionHandler *handler;
+    std::thread network_thread;
+    ConnectionHandler handler;
 
-    // TODO dispatcher signals
     Glib::Dispatcher open_dispatcher;
     Glib::Dispatcher chat_dispatcher;
 
@@ -44,6 +59,7 @@ private:
     void initWidgets();
     void connectSignals();
     void initActions();
+    void init_networking();
 
     void open_callback();
     void chat_callback();

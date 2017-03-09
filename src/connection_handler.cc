@@ -204,7 +204,7 @@ void ConnectionHandler::read_open(std::istream& is)
     is.read(reinterpret_cast<char *>(&other_id), sizeof(other_id));
     other_id = ntohll(other_id);
     std::cout << "OPEN request from " << other_id << std::endl;
-    // TODO show message about incoming request and create way to accept messages
+    window->recv_open(other_id);
 }
 
 void ConnectionHandler::read_error(std::istream& is)
@@ -212,6 +212,7 @@ void ConnectionHandler::read_error(std::istream& is)
     std::string msg;
     std::getline(is, msg);
     std::cerr << "Error: " << msg << std::endl;
+    // TODO show these in a dialog
 }
 
 void ConnectionHandler::punchthrough(asio::ip::tcp::endpoint& remote)
