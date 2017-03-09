@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "peerspeak_window.h"
+
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #define htonll(x) ((uint64_t)htonl((x) & 0xFFFFFFFF) << 32) | htonl((x) >> 32)
 #define ntohll(x) ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32)
@@ -10,19 +12,18 @@
 #define ntohll(x) (x)
 #endif
 
+namespace peerspeak {
+
 using namespace std::placeholders;
 
-ConnectionHandler::ConnectionHandler(asio::io_service& io_service, asio::ip::tcp::endpoint& end,
-                                     uint64_t id)
+ConnectionHandler::ConnectionHandler()
     : acceptor(io_service),
       socket(io_service),
       conn_sock(io_service),
-      acpt_sock(io_service),
-      id(id)
+      acpt_sock(io_service)
 {
     socket.open(asio::ip::tcp::v4());
     socket.set_option(asio::ip::tcp::socket::reuse_address(true));
-    socket.connect(end);
 
     conn_sock.open(asio::ip::tcp::v4());
     conn_sock.set_option(asio::ip::tcp::socket::reuse_address(true));
@@ -32,14 +33,23 @@ ConnectionHandler::ConnectionHandler(asio::io_service& io_service, asio::ip::tcp
     acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
     acceptor.bind(socket.local_endpoint());
     acceptor.listen(10);
-
-    uint64_t temp_id = htonll(id);
-    queue_write_message(OPEN, asio::buffer(&temp_id, sizeof(temp_id)));
-    asio::async_read_until(socket, in_buf, '\n', std::bind(&ConnectionHandler::read_callback, this,
-                                                           _1, _2));
 }
 
-void ConnectionHandler::queue_write_message(MessageType type, const asio::const_buffer& buf)
+void ConnectionHandler::init(PeerspeakWindow *window, asio::ip::tcp::endpoint& end, uint64_t id)
+{
+    socket.connect(end);
+
+    this->window = window;
+    this->id = id;
+
+    uint64_t temp_id = htonll(id);
+    write_message(OPEN, asio::buffer(&temp_id, sizeof(temp_id)));
+    asio::async_read_until(socket, in_buf, '\n', std::bind(&ConnectionHandler::read_callback,
+                                                           this, _1, _2));
+    io_service.run();
+}
+
+void ConnectionHandler::write_message(MessageType type, const asio::const_buffer& buf)
 {
     switch (type) {
     case CONNECT:
@@ -63,11 +73,35 @@ void ConnectionHandler::queue_write_message(MessageType type, const asio::const_
 
     std::string header = get_message_string(type) + " "
         + std::to_string(asio::buffer_size(buf)) + "\n";
-    std::vector<asio::const_buffer> data;
-    data.push_back(asio::buffer(header));
-    data.push_back(buf);
+    std::array<asio::const_buffer, 2> data = {
+        asio::buffer(header),
+        buf };
     asio::async_write(socket, data, asio::transfer_all(),
                       std::bind(&ConnectionHandler::write_callback, this, _1, _2));
+}
+
+void ConnectionHandler::write_message_all(MessageType type, const asio::const_buffer& buf)
+{
+    for (auto conn : connections)
+        if (not conn.second.expired())
+            conn.second.lock()->write_message(type, buf);
+}
+
+void ConnectionHandler::send_accept(bool accept)
+{
+    io_service.dispatch(std::bind(&ConnectionHandler::write_message, this,
+                                  ACCEPT, asio::buffer(&accept, sizeof(accept))));
+}
+
+void ConnectionHandler::send_chat(std::string msg)
+{
+    io_service.dispatch(std::bind(&ConnectionHandler::write_message_all, this,
+                                  CHAT, asio::buffer(msg)));
+}
+
+void ConnectionHandler::close()
+{
+    io_service.stop();
 }
 
 void ConnectionHandler::read_callback(const asio::error_code& ec, size_t num)
@@ -193,7 +227,7 @@ void ConnectionHandler::punch_conn_callback(const asio::error_code& ec)
 {
     if (!ec) {
         acceptor.cancel();
-        auto conn = std::make_shared<Connection>(conn_sock.get_io_service(), std::move(conn_sock),
+        auto conn = std::make_shared<Connection>(io_service, std::move(conn_sock), window,
                                                  connections);
         std::cout << "Punchthrough successful, starting connection..." << std::endl;
         conn->start_connection(id);
@@ -206,7 +240,7 @@ void ConnectionHandler::punch_acpt_callback(const asio::error_code& ec)
 {
     if (!ec) {
         conn_sock.cancel();
-        auto conn = std::make_shared<Connection>(acpt_sock.get_io_service(), std::move(acpt_sock),
+        auto conn = std::make_shared<Connection>(io_service, std::move(acpt_sock), window,
                                                  connections);
         std::cout << "Punchthrough successful, starting connection..." << std::endl;
         conn->start_connection(id);
@@ -214,3 +248,5 @@ void ConnectionHandler::punch_acpt_callback(const asio::error_code& ec)
         std::cerr << "Punchthrough accept error " << ec.value() << ", " << ec.message()
                   << std::endl;
 }
+
+} // namespace peerspeak

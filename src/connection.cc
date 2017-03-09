@@ -10,6 +10,8 @@
 #define ntohll(x) (x)
 #endif
 
+namespace peerspeak {
+
 using namespace std::placeholders;
 
 static const std::array<std::string, 5> type_strings = {
@@ -27,11 +29,13 @@ std::string get_message_string(MessageType type)
 }
 
 Connection::Connection(asio::io_service& io_service, asio::ip::tcp::socket sock,
+                       PeerspeakWindow *window,
                        std::map<uint64_t, std::weak_ptr<Connection>>& conns)
     : socket(std::move(sock)),
       timer(io_service, boost::posix_time::seconds(10)),
       connections(conns)
 {
+    this->window = window;
 }
 
 Connection::~Connection()
@@ -51,7 +55,7 @@ asio::ip::tcp::endpoint Connection::get_endpoint()
 void Connection::start_connection(uint64_t this_id)
 {
     uint64_t temp_id = htonll(this_id);
-    queue_write_message(OPEN, asio::buffer(&temp_id, sizeof(temp_id)));
+    write_message(OPEN, asio::buffer(&temp_id, sizeof(temp_id)));
     auto self = shared_from_this();
     timer.async_wait(
         [this, self](const asio::error_code& ec) {
@@ -61,7 +65,7 @@ void Connection::start_connection(uint64_t this_id)
                                                            self, _1, _2));
 }
 
-void Connection::queue_write_message(MessageType type, const asio::const_buffer& buf)
+void Connection::write_message(MessageType type, const asio::const_buffer& buf)
 {
     switch (type) {
     case CONNECT:
@@ -212,4 +216,7 @@ void Connection::read_chat(std::istream& is)
     std::string line;
     std::getline(is, line);
     std::cout << "Chat from " << id << ": " << line << std::endl;
+
 }
+
+} // namespace peerspeak

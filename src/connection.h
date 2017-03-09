@@ -5,6 +5,8 @@
 
 #include <asio.hpp>
 
+namespace peerspeak {
+
 enum MessageType {
     CONNECT, // Send ip to peer,         4 byte IPv4 address, 2 byte port
     OPEN,    // Open request to/from id, 8 byte uint64_t
@@ -20,12 +22,14 @@ MessageType parse_message_type(std::string type);
 // Get a string from a MessageType, INVALID can't be converted.
 std::string get_message_string(MessageType type);
 
+class PeerspeakWindow;
+
 // Class that manages a single connection, must always be a shared_ptr.
 class Connection
     : public std::enable_shared_from_this<Connection> {
 public:
     // Creates a connection that manages sock and is stored in conns.
-    Connection(asio::io_service& io_service, asio::ip::tcp::socket sock,
+    Connection(asio::io_service& io_service, asio::ip::tcp::socket sock, PeerspeakWindow *window,
                std::map<uint64_t, std::weak_ptr<Connection>>& conns);
     ~Connection();
 
@@ -36,8 +40,7 @@ public:
     void start_connection(uint64_t this_id);
 
     // Queues a message to write, checks to make sure it's in the right format.
-    void queue_write_message(MessageType type,
-                             const asio::const_buffer& buf);
+    void write_message(MessageType type, const asio::const_buffer& buf);
 
 private:
     // Initializers for connection
@@ -59,9 +62,13 @@ private:
     asio::deadline_timer timer;
     asio::streambuf in_buf;
 
+    PeerspeakWindow *window;
+
     uint64_t id;
 
     std::map<uint64_t, std::weak_ptr<Connection>>& connections;
 };
+
+} // namespace peerspeak
 
 #endif // connection_h_INCLUDED
