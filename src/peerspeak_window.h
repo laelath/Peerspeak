@@ -12,7 +12,7 @@
 
 namespace peerspeak {
 
-class ConnectionHandler;
+static const uint16_t default_port = 2738;
 
 class PeerspeakWindow : public Gtk::ApplicationWindow {
 public:
@@ -41,6 +41,11 @@ private:
     Gtk::Button *init_apply_button;
     Gtk::Button *init_cancel_button;
 
+    Gtk::Dialog *open_dialog;
+    Gtk::Entry *open_id_entry;
+    Gtk::Button *open_connect_button;
+    Gtk::Button *open_cancel_button;
+
     // TODO replace unique_ptr with emplace_back
     std::vector<std::unique_ptr<Gtk::Label>> chatLabels;
 
@@ -60,6 +65,8 @@ private:
     void connectSignals();
     void initActions();
     void init_networking();
+
+    void open_connection();
 
     void open_callback();
     void chat_callback();

@@ -87,6 +87,13 @@ void ConnectionHandler::write_message_all(MessageType type, const asio::const_bu
             conn.second.lock()->write_message(type, buf);
 }
 
+void ConnectionHandler::send_open(uint64_t other_id)
+{
+    other_id = htonll(other_id);
+    io_service.dispatch(std::bind(&ConnectionHandler::write_message, this,
+                                  OPEN, asio::buffer(&other_id, sizeof(other_id))));
+}
+
 void ConnectionHandler::send_accept(bool accept)
 {
     io_service.dispatch(std::bind(&ConnectionHandler::write_message, this,

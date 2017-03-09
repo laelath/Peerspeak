@@ -23,6 +23,7 @@ public:
     // Write a message to all connections in connections
     void write_message_all(MessageType type, const asio::const_buffer& buf);
 
+    void send_open(uint64_t other_id);
     void send_accept(bool accept);
     void send_chat(std::string msg);
 
