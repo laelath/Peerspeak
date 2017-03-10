@@ -235,7 +235,6 @@ void ConnectionHandler::punchthrough(asio::ip::tcp::endpoint& remote)
               << remote.port() << std::endl;
 
     acceptor.async_accept(acpt_sock, std::bind(&ConnectionHandler::punch_acpt_callback, this, _1));
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     conn_sock.async_connect(remote, std::bind(&ConnectionHandler::punch_conn_callback, this, _1));
 }
 
