@@ -25,9 +25,9 @@ public:
 private:
     Glib::RefPtr<Gtk::Builder> builder;
 
-    Gtk::TreeView *connectionsView;
-    Gtk::Box *chatBox;
-    Gtk::Entry *chatEntry;
+    Gtk::TreeView *connections_view;
+    Gtk::Box *chat_box;
+    Gtk::Entry *chat_entry;
 
     Gtk::Dialog *accept_dialog;
     Gtk::Label *accept_id_label;
@@ -46,7 +46,7 @@ private:
     Gtk::Button *open_connect_button;
     Gtk::Button *open_cancel_button;
 
-    std::vector<std::unique_ptr<Gtk::Label>> chatLabels;
+    std::vector<std::unique_ptr<Gtk::Label>> chat_labels;
 
     std::thread network_thread;
     ConnectionHandler handler;
@@ -60,9 +60,9 @@ private:
     std::mutex open_mutex;
     std::mutex chat_mutex;
 
-    void initWidgets();
-    void connectSignals();
-    void initActions();
+    void init_widgets();
+    void connect_signals();
+    void init_actions();
     void init_networking();
 
     void open_connection();
@@ -70,9 +70,9 @@ private:
     void open_callback();
     void chat_callback();
 
-    void addChat(std::string msg, std::string user);
-    void addChat(std::string msg);
-    void addEntryChat();
+    void add_chat(std::string msg, std::string user);
+    void add_chat(std::string msg);
+    void add_entry_chat();
 };
 
 } // namespace peerspeak
