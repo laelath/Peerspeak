@@ -35,6 +35,8 @@ public:
                std::map<uint64_t, std::weak_ptr<Connection>>& conns);
     ~Connection();
 
+    void close();
+
     // Get the IP address of the connection
     asio::ip::tcp::endpoint get_endpoint();
 

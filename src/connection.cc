@@ -49,6 +49,11 @@ Connection::~Connection()
     }
 }
 
+void Connection::close()
+{
+    socket.close();
+}
+
 asio::ip::tcp::endpoint Connection::get_endpoint()
 {
     return socket.remote_endpoint();

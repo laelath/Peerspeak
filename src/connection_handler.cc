@@ -113,9 +113,15 @@ void ConnectionHandler::send_chat(std::string msg)
         });
 }
 
-void ConnectionHandler::close()
+void ConnectionHandler::send_close()
 {
-    io_service.stop();
+    io_service.dispatch(
+        [this]() {
+            socket.close();
+            for (auto conn : connections)
+                if (not conn.second.expired())
+                    conn.second.lock()->close();
+        });
 }
 
 void ConnectionHandler::read_callback(const asio::error_code& ec, size_t num)

@@ -30,7 +30,7 @@ public:
     void send_chat(std::string msg);
 
     // Close connections, called on program exit
-    void close();
+    void send_close();
 
 private:
     void read_callback(const asio::error_code& ec, size_t num);

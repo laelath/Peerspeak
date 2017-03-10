@@ -18,7 +18,7 @@ PeerspeakWindow::PeerspeakWindow(BaseObjectType *cobject,
 
 PeerspeakWindow::~PeerspeakWindow()
 {
-    handler.close();
+    handler.send_close();
     if (network_thread.joinable())
         network_thread.join();
 }
