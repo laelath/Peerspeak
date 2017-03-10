@@ -90,20 +90,26 @@ void ConnectionHandler::write_message_all(MessageType type, const asio::const_bu
 void ConnectionHandler::send_open(uint64_t other_id)
 {
     other_id = htonll(other_id);
-    io_service.dispatch(std::bind(&ConnectionHandler::write_message, this,
-                                  OPEN, asio::buffer(&other_id, sizeof(other_id))));
+    io_service.dispatch(
+        [this, other_id]() {
+            write_message(OPEN, asio::buffer(&other_id, sizeof(other_id)));
+        });
 }
 
 void ConnectionHandler::send_accept(bool accept)
 {
-    io_service.dispatch(std::bind(&ConnectionHandler::write_message, this,
-                                  ACCEPT, asio::buffer(&accept, sizeof(accept))));
+    io_service.dispatch(
+        [this, accept]() {
+            write_message(ACCEPT, asio::buffer(&accept, sizeof(accept)));
+        });
 }
 
 void ConnectionHandler::send_chat(std::string msg)
 {
-    io_service.dispatch(std::bind(&ConnectionHandler::write_message_all, this,
-                                  CHAT, asio::buffer(msg)));
+    io_service.dispatch(
+        [this, msg]() {
+            write_message_all(CHAT, asio::buffer(msg));
+        });
 }
 
 void ConnectionHandler::close()

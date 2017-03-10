@@ -141,6 +141,7 @@ void PeerspeakWindow::open_callback()
             handler.send_accept(true);
         else
             handler.send_accept(false);
+        accept_dialog->close();
     }
 }
 
