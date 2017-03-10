@@ -21,6 +21,8 @@ find_package (Threads)
 
 include_directories (include)
 
+add_definitions (-DASIO_STANDALONE)
+
 set (
     SOURCES
     src/main.cc
