@@ -46,7 +46,7 @@ private:
     Gtk::Button *open_connect_button;
     Gtk::Button *open_cancel_button;
 
-    std::vector<Gtk::Label*> chatLabels;
+    std::vector<std::unique_ptr<Gtk::Label>> chatLabels;
 
     std::thread network_thread;
     ConnectionHandler handler;
