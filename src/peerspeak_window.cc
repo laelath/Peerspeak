@@ -153,7 +153,7 @@ void PeerspeakWindow::chat_callback()
 
 void PeerspeakWindow::addChat(std::string msg, std::string user)
 {
-    auto label = std::make_unique<Gtk::Label>();
+    Gtk::Label *label = new Gtk::Label();
     label->set_markup("<b>" + user + "</b>: " + msg);
     label->set_halign(Gtk::Align::ALIGN_START);
     label->set_xalign(0);
@@ -166,7 +166,7 @@ void PeerspeakWindow::addChat(std::string msg, std::string user)
 
 void PeerspeakWindow::addChat(std::string msg)
 {
-    auto label = std::make_unique<Gtk::Label>(msg);
+    Gtk::Label *label = new Gtk::Label();
     label->set_halign(Gtk::Align::ALIGN_END);
     label->set_xalign(1);
     label->set_line_wrap(true);
