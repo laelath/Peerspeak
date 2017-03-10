@@ -14,10 +14,6 @@ PeerspeakWindow::PeerspeakWindow(BaseObjectType *cobject,
     initActions();
 
     connectionsView->grab_focus();
-
-    addChat("This is a test message", "Test");
-    addChat("This is a message sent by the user");
-    addChat("Another <s>test message</s> sent by someone else", "Tast");
 }
 
 PeerspeakWindow::~PeerspeakWindow()

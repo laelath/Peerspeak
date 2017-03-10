@@ -46,7 +46,6 @@ private:
     Gtk::Button *open_connect_button;
     Gtk::Button *open_cancel_button;
 
-    // TODO replace unique_ptr with emplace_back
     std::vector<std::unique_ptr<Gtk::Label>> chatLabels;
 
     std::thread network_thread;
