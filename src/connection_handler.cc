@@ -233,8 +233,8 @@ void ConnectionHandler::punchthrough(asio::ip::tcp::endpoint& remote)
     std::cout << "Starting punchthrough to " << remote.address().to_string() << ":"
               << remote.port() << std::endl;
 
-    conn_sock.async_connect(remote, std::bind(&ConnectionHandler::punch_conn_callback, this, _1));
     acceptor.async_accept(acpt_sock, std::bind(&ConnectionHandler::punch_acpt_callback, this, _1));
+    conn_sock.async_connect(remote, std::bind(&ConnectionHandler::punch_conn_callback, this, _1));
 }
 
 void ConnectionHandler::punch_conn_callback(const asio::error_code& ec)
