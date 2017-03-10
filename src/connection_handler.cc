@@ -27,20 +27,21 @@ ConnectionHandler::ConnectionHandler()
 
     conn_sock.open(asio::ip::tcp::v4());
     conn_sock.set_option(asio::ip::tcp::socket::reuse_address(true));
-    conn_sock.bind(socket.local_endpoint());
 
     acceptor.open(socket.local_endpoint().protocol());
     acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
-    acceptor.bind(socket.local_endpoint());
-    acceptor.listen(10);
 }
 
 void ConnectionHandler::init(PeerspeakWindow *window, asio::ip::tcp::endpoint& end, uint64_t id)
 {
-    socket.connect(end);
-
     this->window = window;
     this->id = id;
+
+    socket.connect(end);
+    conn_sock.bind(socket.local_endpoint());
+    //acceptor.bind(asio::ip::tcp::endpoint(asio::ip::tcp::v4(), socket.local_endpoint().port()));
+    acceptor.bind(socket.local_endpoint());
+    acceptor.listen(10);
 
     uint64_t temp_id = htonll(id);
     write_message(OPEN, asio::buffer(&temp_id, sizeof(temp_id)));
