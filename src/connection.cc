@@ -61,7 +61,10 @@ void Connection::start_connection(uint64_t this_id)
     auto self = shared_from_this();
     timer.async_wait(
         [this, self](const asio::error_code& ec) {
-            socket.close();
+            if (!ec) {
+                std::cout << "Error: Socket timed out" << std::endl;
+                socket.close();
+            }
         });
     asio::async_read_until(socket, in_buf, '\n', std::bind(&Connection::read_start_message,
                                                            self, _1, _2));
