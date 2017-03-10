@@ -43,8 +43,7 @@ private:
     void read_error(std::istream& is);
 
     void punchthrough(asio::ip::tcp::endpoint& remote);
-    void punch_conn_callback(asio::ip::tcp::endpoint& end,
-                             const asio::error_code& ec);
+    void punch_conn_callback(const asio::error_code& ec);
     void punch_acpt_callback(const asio::error_code& ec);
 
     asio::io_service io_service;

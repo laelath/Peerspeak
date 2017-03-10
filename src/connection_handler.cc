@@ -234,12 +234,11 @@ void ConnectionHandler::punchthrough(asio::ip::tcp::endpoint& remote)
               << remote.port() << std::endl;
 
     acceptor.async_accept(acpt_sock, std::bind(&ConnectionHandler::punch_acpt_callback, this, _1));
-    conn_sock.async_connect(remote, std::bind(&ConnectionHandler::punch_conn_callback,
-                                              this, remote, _1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    conn_sock.async_connect(remote, std::bind(&ConnectionHandler::punch_conn_callback, this, _1));
 }
 
-void ConnectionHandler::punch_conn_callback(asio::ip::tcp::endpoint &end,
-                                            const asio::error_code& ec)
+void ConnectionHandler::punch_conn_callback(const asio::error_code& ec)
 {
     if (!ec) {
         acceptor.cancel();
@@ -247,12 +246,9 @@ void ConnectionHandler::punch_conn_callback(asio::ip::tcp::endpoint &end,
                                                  connections);
         std::cout << "Punchthrough successful, starting connection" << std::endl;
         conn->start_connection(id);
-    } else {
+    } else
         std::cerr << "Punchthrough connect error " << ec.value() << ", " << ec.message()
                   << std::endl;
-        conn_sock.async_connect(end, std::bind(&ConnectionHandler::punch_conn_callback,
-                                                  this, end, _1));
-    }
 }
 
 void ConnectionHandler::punch_acpt_callback(const asio::error_code& ec)
@@ -263,11 +259,9 @@ void ConnectionHandler::punch_acpt_callback(const asio::error_code& ec)
                                                  connections);
         std::cout << "Punchthrough successful, starting connection" << std::endl;
         conn->start_connection(id);
-    } else {
+    } else
         std::cerr << "Punchthrough accept error " << ec.value() << ", " << ec.message()
                   << std::endl;
-        conn_sock.cancel();
-    }
 }
 
 } // namespace peerspeak
