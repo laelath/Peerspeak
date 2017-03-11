@@ -15,6 +15,7 @@ class PeerspeakWindow;
 class ConnectionHandler {
 public:
     ConnectionHandler();
+    ~ConnectionHandler();
 
     // Initialize the connection handler
     void init(PeerspeakWindow *window, asio::ip::tcp::endpoint &end, uint64_t id);

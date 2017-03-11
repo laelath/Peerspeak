@@ -46,6 +46,7 @@ Connection::~Connection()
     if (pos != connections.end()) {
         connections.erase(pos);
         std::cout << "Connection ID " << id << " closed" << std::endl;
+        window->show_message("Connection ID " + std::to_string(id) + " closed");
     }
 }
 
@@ -68,6 +69,7 @@ void Connection::start_connection(uint64_t this_id)
         [this, self](const asio::error_code& ec) {
             if (!ec) {
                 std::cout << "Error: Socket timed out" << std::endl;
+                window->show_error("Error: Socket timed out");
                 socket.close();
             }
         });
@@ -148,8 +150,10 @@ void Connection::read_start_buffer(const asio::error_code& ec, size_t num)
             return;
 
         auto end = get_endpoint();
-        std::cout << "Established connection from " << end.address().to_string() << ":"
-                  << end.port() << ", ID " << id << std::endl;
+        std::string err = "Established connection from " + end.address().to_string() + ":"
+            + std::to_string(end.port()) + ", ID " + std::to_string(id);
+        std::cout << err << std::endl;
+        window->show_message(err);
         asio::async_read_until(socket, in_buf, '\n', std::bind(&Connection::read_callback,
                                                                self, _1, _2));
     }

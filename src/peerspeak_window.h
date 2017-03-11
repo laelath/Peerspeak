@@ -21,6 +21,8 @@ public:
 
     void recv_open(uint64_t id);
     void recv_chat(uint64_t id, std::string msg);
+    void show_message(std::string msg);
+    void show_error(std::string msg);
 
 private:
     Glib::RefPtr<Gtk::Builder> builder;
@@ -53,12 +55,18 @@ private:
 
     Glib::Dispatcher open_dispatcher;
     Glib::Dispatcher chat_dispatcher;
+    Glib::Dispatcher message_dispatcher;
+    Glib::Dispatcher error_dispatcher;
 
     std::queue<uint64_t> open_queue;
     std::queue<std::pair<uint64_t, std::string>> chat_queue;
+    std::queue<std::string> message_queue;
+    std::queue<std::string> error_queue;
 
     std::mutex open_mutex;
     std::mutex chat_mutex;
+    std::mutex message_mutex;
+    std::mutex error_mutex;
 
     void init_widgets();
     void connect_signals();
@@ -69,6 +77,8 @@ private:
 
     void open_callback();
     void chat_callback();
+    void message_callback();
+    void error_callback();
 
     void add_chat(std::string msg, std::string user);
     void add_chat(std::string msg);

@@ -32,6 +32,12 @@ ConnectionHandler::ConnectionHandler()
     acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
 }
 
+ConnectionHandler::~ConnectionHandler()
+{
+    std::cerr << "Critical: lost connection to discovery server" << std::endl;
+    window->show_error("Critical: lost connection to discovery server");
+}
+
 void ConnectionHandler::init(PeerspeakWindow *window, asio::ip::tcp::endpoint& end, uint64_t id)
 {
     this->window = window;
@@ -39,7 +45,6 @@ void ConnectionHandler::init(PeerspeakWindow *window, asio::ip::tcp::endpoint& e
 
     socket.connect(end);
     conn_sock.bind(socket.local_endpoint());
-    //acceptor.bind(asio::ip::tcp::endpoint(asio::ip::tcp::v4(), socket.local_endpoint().port()));
     acceptor.bind(socket.local_endpoint());
     acceptor.listen(10);
 
@@ -177,8 +182,6 @@ void ConnectionHandler::read_callback(const asio::error_code& ec, size_t num)
                                        _1, _2, read_func));
     } else if (ec != asio::error::eof) {
         std::cerr << "Asio read error: " << ec.value() << ", " << ec.message() << std::endl;
-    } else {
-        std::cerr << "Critical: lost connection to discovery server" << std::endl;
     }
 }
 
@@ -192,8 +195,6 @@ void ConnectionHandler::read_buffer(const asio::error_code& ec, size_t num,
                                                                this, _1, _2));
     } else if (ec != asio::error::eof) {
         std::cerr << "Asio read error: " << ec.value() << ", " << ec.message() << std::endl;
-    } else {
-        std::cerr << "Critical: lost connection to discovery server" << std::endl;
     }
 }
 
@@ -232,7 +233,7 @@ void ConnectionHandler::read_error(std::istream& is)
     std::string msg;
     std::getline(is, msg);
     std::cerr << "Error: " << msg << std::endl;
-    // TODO show these in a dialog
+    window->show_error("Error: " + msg);
 }
 
 void ConnectionHandler::punchthrough(asio::ip::tcp::endpoint& remote)

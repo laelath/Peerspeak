@@ -37,6 +37,20 @@ void PeerspeakWindow::recv_chat(uint64_t id, std::string msg)
     chat_dispatcher();
 }
 
+void PeerspeakWindow::show_message(std::string msg)
+{
+    std::lock_guard<std::mutex> lock(message_mutex);
+    message_queue.push(msg);
+    message_dispatcher();
+}
+
+void PeerspeakWindow::show_error(std::string msg)
+{
+    std::lock_guard<std::mutex> lock(error_mutex);
+    error_queue.push(msg);
+    error_dispatcher();
+}
+
 void PeerspeakWindow::init_widgets()
 {
     builder->get_widget("connections_view", connections_view);
@@ -84,6 +98,8 @@ void PeerspeakWindow::connect_signals()
 
     open_dispatcher.connect(std::bind(&PeerspeakWindow::open_callback, this));
     chat_dispatcher.connect(std::bind(&PeerspeakWindow::chat_callback, this));
+    message_dispatcher.connect(std::bind(&PeerspeakWindow::message_callback, this));
+    error_dispatcher.connect(std::bind(&PeerspeakWindow::error_callback, this));
 }
 
 void PeerspeakWindow::init_actions()
@@ -143,11 +159,43 @@ void PeerspeakWindow::open_callback()
 
 void PeerspeakWindow::chat_callback()
 {
-    std::lock_guard<std::mutex> lock(chat_mutex);
+    std::unique_lock<std::mutex> lock(chat_mutex);
     if (not chat_queue.empty()) {
         auto chat = chat_queue.front();
         add_chat(chat.second, std::to_string(chat.first));
         chat_queue.pop();
+    }
+}
+
+void PeerspeakWindow::message_callback()
+{
+    std::unique_lock<std::mutex> lock(message_mutex);
+    if (not message_queue.empty()) {
+        std::string msg = message_queue.front();
+        message_queue.pop();
+        lock.unlock();
+
+        Gtk::MessageDialog dialog(msg, false, Gtk::MessageType::MESSAGE_INFO,
+                                  Gtk::ButtonsType::BUTTONS_OK, true);
+        dialog.set_transient_for(*this);
+        dialog.run();
+        dialog.close();
+    }
+}
+
+void PeerspeakWindow::error_callback()
+{
+    std::unique_lock<std::mutex> lock(error_mutex);
+    if (not error_queue.empty()) {
+        std::string err = error_queue.front();
+        error_queue.pop();
+        lock.unlock();
+
+        Gtk::MessageDialog dialog(err, false, Gtk::MessageType::MESSAGE_ERROR,
+                                  Gtk::ButtonsType::BUTTONS_CLOSE, true);
+        dialog.set_transient_for(*this);
+        dialog.run();
+        dialog.close();
     }
 }
 
