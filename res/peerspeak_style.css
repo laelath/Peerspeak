@@ -1,4 +1,4 @@
-box#chat label {
+label.chat {
     font-size: xx-large;
     background-color: shade(@bg_color, 0.8);
     border-radius: 25px;

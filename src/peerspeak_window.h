@@ -21,7 +21,8 @@ public:
 
     void recv_open(uint64_t id);
     void recv_chat(uint64_t id, std::string msg);
-    void show_message(std::string msg);
+    void recv_connect(uint64_t id);
+    void recv_disconnect(uint64_t id);
     void show_error(std::string msg);
 
 private:
@@ -54,18 +55,21 @@ private:
     ConnectionHandler handler;
 
     Glib::Dispatcher open_dispatcher;
+    Glib::Dispatcher connect_dispatcher;
+    Glib::Dispatcher disconnect_dispatcher;
     Glib::Dispatcher chat_dispatcher;
-    Glib::Dispatcher message_dispatcher;
     Glib::Dispatcher error_dispatcher;
 
     std::queue<uint64_t> open_queue;
+    std::queue<uint64_t> connect_queue;
+    std::queue<uint64_t> disconnect_queue;
     std::queue<std::pair<uint64_t, std::string>> chat_queue;
-    std::queue<std::string> message_queue;
     std::queue<std::string> error_queue;
 
     std::mutex open_mutex;
+    std::mutex connect_mutex;
+    std::mutex disconnect_mutex;
     std::mutex chat_mutex;
-    std::mutex message_mutex;
     std::mutex error_mutex;
 
     void init_widgets();
@@ -76,9 +80,13 @@ private:
     void open_connection();
 
     void open_callback();
+    void connect_callback();
+    void disconnect_callback();
     void chat_callback();
-    void message_callback();
     void error_callback();
+
+    void add_connect(uint64_t id);
+    void add_disconnect(uint64_t id);
 
     void add_chat(std::string msg, std::string user);
     void add_chat(std::string msg);

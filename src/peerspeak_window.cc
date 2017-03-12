@@ -30,18 +30,25 @@ void PeerspeakWindow::recv_open(uint64_t id)
     open_dispatcher();
 }
 
+void PeerspeakWindow::recv_connect(uint64_t id)
+{
+    std::lock_guard<std::mutex> lock(connect_mutex);
+    connect_queue.push(id);
+    connect_dispatcher();
+}
+
+void PeerspeakWindow::recv_disconnect(uint64_t id)
+{
+    std::lock_guard<std::mutex> lock(disconnect_mutex);
+    disconnect_queue.push(id);
+    disconnect_dispatcher();
+}
+
 void PeerspeakWindow::recv_chat(uint64_t id, std::string msg)
 {
     std::lock_guard<std::mutex> lock(chat_mutex);
     chat_queue.emplace(id, msg);
     chat_dispatcher();
-}
-
-void PeerspeakWindow::show_message(std::string msg)
-{
-    std::lock_guard<std::mutex> lock(message_mutex);
-    message_queue.push(msg);
-    message_dispatcher();
 }
 
 void PeerspeakWindow::show_error(std::string msg)
@@ -97,8 +104,9 @@ void PeerspeakWindow::connect_signals()
         std::bind(&Gtk::Dialog::response, open_dialog, Gtk::RESPONSE_CANCEL));
 
     open_dispatcher.connect(std::bind(&PeerspeakWindow::open_callback, this));
+    connect_dispatcher.connect(std::bind(&PeerspeakWindow::connect_callback, this));
+    disconnect_dispatcher.connect(std::bind(&PeerspeakWindow::disconnect_callback, this));
     chat_dispatcher.connect(std::bind(&PeerspeakWindow::chat_callback, this));
-    message_dispatcher.connect(std::bind(&PeerspeakWindow::message_callback, this));
     error_dispatcher.connect(std::bind(&PeerspeakWindow::error_callback, this));
 }
 
@@ -157,6 +165,26 @@ void PeerspeakWindow::open_callback()
     }
 }
 
+void PeerspeakWindow::connect_callback()
+{
+    std::unique_lock<std::mutex> lock(connect_mutex);
+    if (not connect_queue.empty()) {
+        uint64_t id = connect_queue.front();
+        add_connect(id);
+        connect_queue.pop();
+    }
+}
+
+void PeerspeakWindow::disconnect_callback()
+{
+    std::unique_lock<std::mutex> lock(disconnect_mutex);
+    if (not disconnect_queue.empty()) {
+        uint64_t id = disconnect_queue.front();
+        add_disconnect(id);
+        disconnect_queue.pop();
+    }
+}
+
 void PeerspeakWindow::chat_callback()
 {
     std::unique_lock<std::mutex> lock(chat_mutex);
@@ -164,22 +192,6 @@ void PeerspeakWindow::chat_callback()
         auto chat = chat_queue.front();
         add_chat(chat.second, std::to_string(chat.first));
         chat_queue.pop();
-    }
-}
-
-void PeerspeakWindow::message_callback()
-{
-    std::unique_lock<std::mutex> lock(message_mutex);
-    if (not message_queue.empty()) {
-        std::string msg = message_queue.front();
-        message_queue.pop();
-        lock.unlock();
-
-        Gtk::MessageDialog dialog(msg, false, Gtk::MessageType::MESSAGE_INFO,
-                                  Gtk::ButtonsType::BUTTONS_OK, true);
-        dialog.set_transient_for(*this);
-        dialog.run();
-        dialog.close();
     }
 }
 
@@ -199,17 +211,48 @@ void PeerspeakWindow::error_callback()
     }
 }
 
+void PeerspeakWindow::add_connect(uint64_t id)
+{
+    auto label = std::make_unique<Gtk::Label>();
+    label->set_markup(std::to_string(id) + " connected");
+    label->set_halign(Gtk::Align::ALIGN_START);
+    label->set_xalign(0);
+    label->show();
+    chat_box->pack_start(*label, false, true);
+    chat_labels.push_back(std::move(label));
+}
+
+void PeerspeakWindow::add_disconnect(uint64_t id)
+{
+    auto label = std::make_unique<Gtk::Label>();
+    label->set_markup(std::to_string(id) + " disconnected");
+    label->set_halign(Gtk::Align::ALIGN_START);
+    label->set_xalign(0);
+    label->show();
+    chat_box->pack_start(*label, false, true);
+    chat_labels.push_back(std::move(label));
+}
+
 void PeerspeakWindow::add_chat(std::string msg, std::string user)
 {
     auto label = std::make_unique<Gtk::Label>();
-    label->set_markup("<b>" + user + "</b>: " + msg);
+    label->set_markup(msg);
     label->set_halign(Gtk::Align::ALIGN_START);
     label->set_xalign(0);
     label->set_line_wrap(true);
     label->set_selectable(true);
+    label->get_style_context()->add_class("chat");
     label->show();
     chat_box->pack_start(*label, false, true);
     chat_labels.push_back(std::move(label));
+
+    auto user_label = std::make_unique<Gtk::Label>();
+    user_label->set_markup(msg);
+    user_label->set_halign(Gtk::Align::ALIGN_START);
+    user_label->set_xalign(0);
+    user_label->show();
+    chat_box->pack_start(*user_label, false, true);
+    chat_labels.push_back(std::move(user_label));
 }
 
 void PeerspeakWindow::add_chat(std::string msg)
@@ -220,6 +263,7 @@ void PeerspeakWindow::add_chat(std::string msg)
     label->set_xalign(1);
     label->set_line_wrap(true);
     label->set_selectable(true);
+    label->get_style_context()->add_class("chat");
     label->show();
     chat_box->pack_start(*label, false, true);
     chat_labels.push_back(std::move(label));

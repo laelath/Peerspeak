@@ -206,6 +206,9 @@
                                 <property name="label" translatable="yes">&lt;b&gt;Welcome to Peerspeak!&lt;/b&gt;</property>
                                 <property name="use_markup">True</property>
                                 <property name="selectable">True</property>
+                                <style>
+                                  <class name="chat"/>
+                                </style>
                               </object>
                               <packing>
                                 <property name="expand">False</property>
