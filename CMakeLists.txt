@@ -3,6 +3,11 @@ project(Peerspeak)
 
 find_package (PkgConfig REQUIRED)
 pkg_check_modules (GTKMM REQUIRED gtkmm-3.0)
+pkg_check_modules (OPUS REQUIRED opus)
+
+include_directories (${GTKMM_INCLUDE_DIRS} ${OPUS_INCLUDE_DIRS})
+link_directories (${GTKMM_LIBRARY_DIRS} ${OPUS_LIBRARY_DIRS})
+add_definitions (${GTKMM_CFLAGS_OTHER} ${OPUS_CFLAGS_OTHER})
 
 execute_process (
     COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=glib_compile_resources gio-2.0
@@ -13,14 +18,9 @@ add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/resources.c
     DEPENDS res/peerspeak.gresources.xml res/peerspeak_ui.glade res/peerspeak_style.css
     COMMAND ${GLIB_COMPILE_RESOURCES} res/peerspeak.gresources.xml --target=${CMAKE_CURRENT_BINARY_DIR}/resources.c --sourcedir=${CMAKE_CURRENT_SOURCE_DIR}/res --generate-source)
 
-include_directories (${GTKMM_INCLUDE_DIRS})
-link_directories (${GTKMM_LIBRARY_DIRS})
-add_definitions (${GTKMM_CFLAGS_OTHER})
-
 find_package (Threads)
 
 include_directories (include)
-
 add_definitions (-DASIO_STANDALONE)
 
 set (
@@ -33,7 +33,7 @@ set (
 
 add_executable (peerspeak ${SOURCES})
 
-target_link_libraries (peerspeak ${CMAKE_THREAD_LIBS_INIT} ${GTKMM_LIBRARIES})
+target_link_libraries (peerspeak ${CMAKE_THREAD_LIBS_INIT} ${GTKMM_LIBRARIES} ${OPUS_LIBRARIES})
 set_property (TARGET peerspeak PROPERTY CXX_STANDARD 14)
 
 install (TARGETS peerspeak DESTINATION bin)
