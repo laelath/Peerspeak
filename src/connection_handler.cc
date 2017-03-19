@@ -38,16 +38,22 @@ ConnectionHandler::~ConnectionHandler()
     window->show_error("Critical: lost connection to discovery server");
 }
 
-void ConnectionHandler::init(PeerspeakWindow *window, asio::ip::tcp::endpoint& end, uint64_t id)
+void ConnectionHandler::init(PeerspeakWindow *window, std::string ip, uint16_t port, uint64_t id)
 {
     this->window = window;
     this->id = id;
+
+    asio::ip::address addr = asio::ip::address::from_string(ip);
+    asio::ip::tcp::endpoint end(addr, port);
 
     socket.connect(end);
     conn_sock.bind(socket.local_endpoint());
     acceptor.bind(socket.local_endpoint());
     acceptor.listen(10);
+}
 
+void ConnectionHandler::start()
+{
     uint64_t temp_id = htonll(id);
     write_message(OPEN, asio::buffer(&temp_id, sizeof(temp_id)));
     asio::async_read_until(socket, in_buf, '\n', std::bind(&ConnectionHandler::read_callback,

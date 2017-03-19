@@ -18,7 +18,10 @@ public:
     ~ConnectionHandler();
 
     // Initialize the connection handler
-    void init(PeerspeakWindow *window, asio::ip::tcp::endpoint &end, uint64_t id);
+    void init(PeerspeakWindow *window, std::string ip, uint16_t port, uint64_t id);
+
+    // Start accepting connections
+    void start();
 
     // Write a message to the discovery server
     void write_message(MessageType type, const asio::const_buffer& buf);

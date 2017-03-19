@@ -16,20 +16,6 @@ namespace peerspeak {
 
 using namespace std::placeholders;
 
-static const std::array<std::string, 5> type_strings = {
-    "CONNECT", "OPEN", "ACCEPT", "ERROR", "CHAT" };
-
-MessageType parse_message_type(std::string type)
-{
-    auto pos = std::find(type_strings.begin(), type_strings.end(), type);
-    return static_cast<MessageType>(std::distance(type_strings.begin(), pos));
-}
-
-std::string get_message_string(MessageType type)
-{
-    return type_strings[type];
-}
-
 Connection::Connection(asio::io_service& io_service, asio::ip::tcp::socket sock,
                        PeerspeakWindow *window,
                        std::map<uint64_t, std::weak_ptr<Connection>>& conns)

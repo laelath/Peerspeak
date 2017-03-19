@@ -2,7 +2,6 @@
 #include <mutex>
 #include <thread>
 
-#include <asio.hpp>
 #include <gtkmm.h>
 
 #include "connection_handler.h"

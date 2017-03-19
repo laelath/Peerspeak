@@ -4,10 +4,11 @@ project(Peerspeak)
 find_package (PkgConfig REQUIRED)
 pkg_check_modules (GTKMM REQUIRED gtkmm-3.0)
 pkg_check_modules (OPUS REQUIRED opus)
+pkg_check_modules (PULSE REQUIRED libpulse)
 
-include_directories (${GTKMM_INCLUDE_DIRS} ${OPUS_INCLUDE_DIRS})
-link_directories (${GTKMM_LIBRARY_DIRS} ${OPUS_LIBRARY_DIRS})
-add_definitions (${GTKMM_CFLAGS_OTHER} ${OPUS_CFLAGS_OTHER})
+include_directories (${GTKMM_INCLUDE_DIRS} ${OPUS_INCLUDE_DIRS} ${PULSE_INCLUDE_DIRS})
+link_directories (${GTKMM_LIBRARY_DIRS} ${OPUS_LIBRARY_DIRS} ${PULSE_LIBRARY_DIRS})
+add_definitions (${GTKMM_CFLAGS_OTHER} ${OPUS_CFLAGS_OTHER} ${PULSE_CFLAGS_OTHER})
 
 execute_process (
     COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=glib_compile_resources gio-2.0
@@ -29,6 +30,7 @@ set (
     src/peerspeak_window.cc
     src/connection_handler.cc
     src/connection.cc
+    src/message.cc
     ${CMAKE_CURRENT_BINARY_DIR}/resources.c)
 
 add_executable (peerspeak ${SOURCES})

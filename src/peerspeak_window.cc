@@ -122,15 +122,13 @@ void PeerspeakWindow::init_networking()
     if (status == Gtk::RESPONSE_APPLY) {
         // TODO parse error handling
         uint64_t id = std::stoull(init_id_entry->get_text());
-        asio::ip::address addr = asio::ip::address::from_string(init_ip_entry->get_text());
 
         uint16_t port = default_port;
         if (init_port_entry->get_text().length() > 0)
             port = std::stoi(init_port_entry->get_text());
 
-        asio::ip::tcp::endpoint discovery(addr, port);
         network_thread = std::thread(std::bind(&ConnectionHandler::init, &handler,
-                                               this, discovery, id));
+                                               this, init_ip_entry->get_text(), port, id));
     } else
         std::cout << "Critical: Discovery server information not given" << std::endl;
     init_dialog->close();
