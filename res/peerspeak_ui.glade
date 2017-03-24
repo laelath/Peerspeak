@@ -37,7 +37,6 @@
                         <property name="can_focus">False</property>
                         <property name="action_name">win.open-connection</property>
                         <property name="use_underline">True</property>
-                        <property name="image">connect_image</property>
                         <property name="use_stock">False</property>
                       </object>
                     </child>
@@ -163,6 +162,8 @@
                   <object class="GtkViewport">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="margin_left">5</property>
+                    <property name="margin_top">5</property>
                     <child>
                       <object class="GtkBox">
                         <property name="visible">True</property>
@@ -172,7 +173,7 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="valign">start</property>
-                            <property name="icon_name">audio-volume-muted-symbolic</property>
+                            <property name="pixbuf">audio_idle.svg</property>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -181,11 +182,11 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkImage" id="connection_transmit_image">
+                          <object class="GtkImage" id="connection_status_image">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="valign">start</property>
-                            <property name="icon_name">network-idle-symbolic</property>
+                            <property name="pixbuf">connection_idle.svg</property>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -228,8 +229,8 @@
                 </child>
               </object>
               <packing>
-                <property name="resize">False</property>
-                <property name="shrink">True</property>
+                <property name="resize">True</property>
+                <property name="shrink">False</property>
               </packing>
             </child>
             <child>
@@ -250,6 +251,7 @@
                       <object class="GtkViewport">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="margin_top">5</property>
                         <child>
                           <object class="GtkBox" id="chat_box">
                             <property name="name">chat</property>
@@ -257,7 +259,6 @@
                             <property name="can_focus">False</property>
                             <property name="margin_left">3</property>
                             <property name="margin_right">3</property>
-                            <property name="margin_top">3</property>
                             <property name="orientation">vertical</property>
                             <property name="spacing">3</property>
                             <child>
@@ -317,75 +318,6 @@
       </object>
     </child>
     <child type="titlebar">
-      <placeholder/>
-    </child>
-  </object>
-  <object class="GtkDialog" id="accept_dialog">
-    <property name="can_focus">False</property>
-    <property name="title" translatable="yes">Incoming Open Request</property>
-    <property name="type_hint">dialog</property>
-    <property name="transient_for">peerspeak_window</property>
-    <child internal-child="vbox">
-      <object class="GtkBox">
-        <property name="can_focus">False</property>
-        <property name="orientation">vertical</property>
-        <property name="spacing">2</property>
-        <child internal-child="action_area">
-          <object class="GtkButtonBox">
-            <property name="can_focus">False</property>
-            <property name="layout_style">end</property>
-            <child>
-              <object class="GtkButton" id="accept_reject_button">
-                <property name="label" translatable="yes">Reject</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-              </object>
-              <packing>
-                <property name="expand">True</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="accept_accept_button">
-                <property name="label" translatable="yes">Accept</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-              </object>
-              <packing>
-                <property name="expand">True</property>
-                <property name="fill">True</property>
-                <property name="position">1</property>
-              </packing>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">False</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkLabel" id="accept_id_label">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="margin_left">5</property>
-            <property name="margin_right">5</property>
-            <property name="margin_top">5</property>
-            <property name="margin_bottom">5</property>
-            <property name="label" translatable="yes">Open request from ID: </property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">1</property>
-          </packing>
-        </child>
-      </object>
-    </child>
-    <child>
       <placeholder/>
     </child>
   </object>
@@ -615,6 +547,82 @@
                 <property name="position">1</property>
               </packing>
             </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <child>
+      <placeholder/>
+    </child>
+  </object>
+  <object class="GtkImage" id="reject_image">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-close</property>
+  </object>
+  <object class="GtkDialog" id="accept_dialog">
+    <property name="can_focus">False</property>
+    <property name="title" translatable="yes">Incoming Open Request</property>
+    <property name="type_hint">dialog</property>
+    <property name="transient_for">peerspeak_window</property>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+            <child>
+              <object class="GtkButton" id="accept_reject_button">
+                <property name="label" translatable="yes">Reject</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="image">reject_image</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="accept_accept_button">
+                <property name="label" translatable="yes">Accept</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="image">connect_image</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="accept_id_label">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="margin_left">5</property>
+            <property name="margin_right">5</property>
+            <property name="margin_top">5</property>
+            <property name="margin_bottom">5</property>
+            <property name="label" translatable="yes">Open request from ID: </property>
           </object>
           <packing>
             <property name="expand">False</property>

@@ -2,7 +2,6 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   xmlns:osb="http://www.openswatchbook.org/uri/2009/osb"
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:cc="http://creativecommons.org/ns#"
    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -11,54 +10,13 @@
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="210mm"
-   height="297mm"
-   viewBox="0 0 210 297"
+   width="16px"
+   height="16px"
+   viewBox="0 0 16 16"
    version="1.1"
-   id="svg8"
+   id="SVGRoot"
    inkscape:version="0.92.1 r"
    sodipodi:docname="audio_active.svg">
-  <defs
-     id="defs2">
-    <linearGradient
-       inkscape:collect="always"
-       id="linearGradient6053">
-      <stop
-         style="stop-color:#ff0000;stop-opacity:1;"
-         offset="0"
-         id="stop6049" />
-      <stop
-         style="stop-color:#a01e1e;stop-opacity:1"
-         offset="1"
-         id="stop6051" />
-    </linearGradient>
-    <linearGradient
-       id="linearGradient6015"
-       osb:paint="solid">
-      <stop
-         style="stop-color:#000000;stop-opacity:1;"
-         offset="0"
-         id="stop6013" />
-    </linearGradient>
-    <linearGradient
-       id="linearGradient4503"
-       osb:paint="solid">
-      <stop
-         style="stop-color:#ff0000;stop-opacity:1;"
-         offset="0"
-         id="stop4501" />
-    </linearGradient>
-    <radialGradient
-       inkscape:collect="always"
-       xlink:href="#linearGradient6053"
-       id="radialGradient6055"
-       cx="104.69941"
-       cy="113.68154"
-       fx="104.69941"
-       fy="113.68154"
-       r="39.6875"
-       gradientUnits="userSpaceOnUse" />
-  </defs>
   <sodipodi:namedview
      id="base"
      pagecolor="#ffffff"
@@ -66,39 +24,68 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.98994949"
-     inkscape:cx="425.36458"
-     inkscape:cy="576.04357"
-     inkscape:document-units="mm"
+     inkscape:zoom="54.5625"
+     inkscape:cx="7.6210027"
+     inkscape:cy="7.761717"
+     inkscape:document-units="px"
      inkscape:current-layer="layer1"
-     showgrid="false"
+     showgrid="true"
      inkscape:window-width="1916"
-     inkscape:window-height="1037"
+     inkscape:window-height="1040"
      inkscape:window-x="0"
-     inkscape:window-y="41"
-     inkscape:window-maximized="0" />
+     inkscape:window-y="38"
+     inkscape:window-maximized="0"
+     inkscape:grid-bbox="true">
+    <inkscape:grid
+       type="xygrid"
+       id="grid28" />
+  </sodipodi:namedview>
+  <defs
+     id="defs10">
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient4535">
+      <stop
+         style="stop-color:#ff2a2a;stop-opacity:1"
+         offset="0"
+         id="stop4531" />
+      <stop
+         style="stop-color:#c80000;stop-opacity:1"
+         offset="1"
+         id="stop4533" />
+    </linearGradient>
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient4535"
+       id="radialGradient4537"
+       cx="8"
+       cy="8"
+       fx="8"
+       fy="8"
+       r="6"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
   <metadata
-     id="metadata5">
+     id="metadata13">
     <rdf:RDF>
       <cc:Work
          rdf:about="">
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
   <g
-     inkscape:label="Layer 1"
-     inkscape:groupmode="layer"
      id="layer1"
-     style="display:inline">
+     inkscape:groupmode="layer"
+     inkscape:label="Layer 1">
     <circle
-       style="fill:url(#radialGradient6055);fill-opacity:1;stroke:none;stroke-width:0.26458332;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       id="path4487"
-       cx="104.69941"
-       cy="113.68154"
-       r="39.6875" />
+       style="fill:url(#radialGradient4537);fill-opacity:1;stroke:none;stroke-width:1;stroke-linecap:butt;stroke-miterlimit:4;stroke-dasharray:12, 12;stroke-dashoffset:0"
+       id="path4526"
+       cx="8"
+       cy="8"
+       r="6" />
   </g>
 </svg>
