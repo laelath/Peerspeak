@@ -2,6 +2,12 @@
 <gresources>
     <gresource prefix="/us/laelath/peerspeak">
         <file preprocess="xml-stripblanks">peerspeak_ui.glade</file>
+        <file preprocess="xml-stripblanks">audio_active.svg</file>
+        <file preprocess="xml-stripblanks">audio_idle.svg</file>
+        <file preprocess="xml-stripblanks">connection_idle.svg</file>
+        <file preprocess="xml-stripblanks">connection_receive.svg</file>
+        <file preprocess="xml-stripblanks">connection_transmit.svg</file>
+        <file preprocess="xml-stripblanks">connection_transmit_receive.svg</file>
         <file>peerspeak_style.css</file>
     </gresource>
 </gresources>

@@ -13,7 +13,7 @@ PeerspeakWindow::PeerspeakWindow(BaseObjectType *cobject,
     connect_signals();
     init_actions();
 
-    connections_view->grab_focus();
+    chat_entry->grab_focus();
 }
 
 PeerspeakWindow::~PeerspeakWindow()
@@ -60,7 +60,7 @@ void PeerspeakWindow::show_error(std::string msg)
 
 void PeerspeakWindow::init_widgets()
 {
-    builder->get_widget("connections_view", connections_view);
+    //builder->get_widget("connections_view", connections_view);
     builder->get_widget("chat_box", chat_box);
     builder->get_widget("chat_entry", chat_entry);
 

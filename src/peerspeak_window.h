@@ -28,7 +28,7 @@ public:
 private:
     Glib::RefPtr<Gtk::Builder> builder;
 
-    Gtk::TreeView *connections_view;
+    //Gtk::TreeView *connections_view;
     Gtk::Box *chat_box;
     Gtk::Entry *chat_entry;
 

@@ -183,7 +183,7 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="valign">start</property>
-                            <property name="pixbuf">audio_idle.svg</property>
+                            <property name="resource">/us/laelath/peerspeak/audio_idle.svg</property>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -196,7 +196,7 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="valign">start</property>
-                            <property name="pixbuf">connection_idle.svg</property>
+                            <property name="resource">/us/laelath/peerspeak/connection_idle.svg</property>
                           </object>
                           <packing>
                             <property name="expand">False</property>
