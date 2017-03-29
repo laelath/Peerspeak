@@ -22,8 +22,6 @@ int main(int argc, char *argv[])
         Gtk::StyleContext::add_provider_for_screen(Gdk::Screen::get_default(), style,
                                                    GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
-        // TODO Interface for making open requests
-
         int status = app->run(*window);
         return status;
     } catch (const Glib::FileError e) {

@@ -19,7 +19,8 @@ class Connection
 public:
     // Creates a connection that manages sock and is stored in conns.
     Connection(asio::io_service& io_service, asio::ip::tcp::socket sock, PeerspeakWindow *window,
-               std::map<uint64_t, std::weak_ptr<Connection>>& conns);
+               std::map<uint64_t, std::weak_ptr<Connection>>& conns,
+               std::vector<std::pair<uint64_t, uint16_t>>& sigs);
     ~Connection();
 
     void close();
@@ -56,8 +57,10 @@ private:
     PeerspeakWindow *window;
 
     uint64_t id;
+    uint16_t count;
 
     std::map<uint64_t, std::weak_ptr<Connection>>& connections;
+    std::vector<std::pair<uint64_t, uint16_t>>& message_signatures;
 };
 
 } // namespace peerspeak

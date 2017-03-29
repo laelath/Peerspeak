@@ -1,6 +1,7 @@
 #ifndef connection_handler_h_INCLUDED
 #define connection_handler_h_INCLUDED
 
+#include <deque>
 #include <map>
 
 #include <asio.hpp>
@@ -63,6 +64,9 @@ private:
     uint64_t id;
 
     std::map<uint64_t, std::weak_ptr<Connection>> connections;
+
+    // Message signatures for forwarding
+    std::vector<std::pair<uint64_t, uint16_t>> message_signatures;
 };
 
 } // namespace peerspeak

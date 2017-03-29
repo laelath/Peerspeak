@@ -5,8 +5,8 @@
 
 namespace peerspeak {
 
-static const std::array<std::string, 5> type_strings = {
-    "CONNECT", "OPEN", "ACCEPT", "ERROR", "CHAT" };
+static const std::array<std::string, 6> type_strings = {
+    "CONNECT", "OPEN", "ADD", "ACCEPT", "ERROR", "CHAT" };
 
 MessageType parse_message_type(std::string type)
 {

@@ -18,10 +18,12 @@ using namespace std::placeholders;
 
 Connection::Connection(asio::io_service& io_service, asio::ip::tcp::socket sock,
                        PeerspeakWindow *window,
-                       std::map<uint64_t, std::weak_ptr<Connection>>& conns)
+                       std::map<uint64_t, std::weak_ptr<Connection>>& conns,
+                       std::vector<std::pair<uint64_t, uint16_t>>& sigs)
     : socket(std::move(sock)),
       timer(io_service, std::chrono::seconds(10)),
-      connections(conns)
+      connections(conns),
+      message_signatures(sigs)
 {
     this->window = window;
 }
@@ -74,6 +76,10 @@ void Connection::write_message(MessageType type, const asio::const_buffer& buf)
         if (asio::buffer_size(buf) != 8)
             throw std::invalid_argument("OPEN expected a uint64_t id");
         break;
+    case ADD:
+        if (asio::buffer_size(buf) != 8)
+            throw std::invalid_argument("ADD expected a uint64_t id");
+        break;
     case ACCEPT:
         if (asio::buffer_size(buf) != 1)
             throw std::invalid_argument("ACCEPT expected a boolean byte");
@@ -85,9 +91,13 @@ void Connection::write_message(MessageType type, const asio::const_buffer& buf)
         throw std::invalid_argument("Cannot send INVALID message");
     }
 
+    uint64_t temp_id = htonll(id);
+    uint16_t temp_count = htons(count);
     std::string header = get_message_string(type) + " "
         + std::to_string(asio::buffer_size(buf)) + "\n";
     std::vector<asio::const_buffer> data;
+    data.push_back(asio::buffer(&temp_id, sizeof(temp_id)));
+    data.push_back(asio::buffer(&temp_count, sizeof(temp_count)));
     data.push_back(asio::buffer(header));
     data.push_back(buf);
     asio::async_write(socket, data, asio::transfer_all(), std::bind(&Connection::write_callback,
@@ -155,7 +165,7 @@ void Connection::read_callback(const asio::error_code& ec, size_t num)
         size_t idx = line.find(' ');
         MessageType type = parse_message_type(line.substr(0, idx));
 
-        size_t bytes;
+        size_t bytes = 0;
         try {
             bytes = std::stoul(line.substr(idx + 1));
         } catch (std::invalid_argument& e) {
@@ -163,6 +173,7 @@ void Connection::read_callback(const asio::error_code& ec, size_t num)
         } catch (std::out_of_range& e) {
             return;
         }
+        bytes += sizeof(id) + sizeof(count);
 
         std::function<void(std::istream&)> read_func;
         auto self = shared_from_this();
@@ -171,12 +182,18 @@ void Connection::read_callback(const asio::error_code& ec, size_t num)
         case CHAT:
             read_func = std::bind(&Connection::read_chat, self, _1);
             break;
+        case ADD:
+            // This is used to add a peer to relay to
+            // TODO CRITICAL Add add command
+            break;
         case CONNECT:
-            // TODO CONNECT will be handled in the future
+            // Connections just done through discovery server, not used
         case OPEN:
             // This might be used with client relays
+            // Might also just use discovery for forming connections
         case ACCEPT:
             // Then this would also need to be handled
+            // Will probably just use discovery server for forming connections
         case ERROR:
             // This might have a use later
         case INVALID:
@@ -198,7 +215,26 @@ void Connection::read_buffer(const asio::error_code& ec, size_t num,
 {
     if (!ec) {
         std::istream is(&in_buf);
+        // Read fingerprint
+        // TODO Error checking for message fingerprint
+        uint64_t from_id;
+        uint16_t msg_id;
+        is.read(reinterpret_cast<char *>(&from_id), sizeof from_id);
+        is.read(reinterpret_cast<char *>(&msg_id), sizeof msg_id);
+        from_id = ntohll(from_id);
+        msg_id = ntohs(msg_id);
+
+        if (std::find(message_signatures.begin(), message_signatures.end(),
+                      std::make_pair(from_id, msg_id)) == message_signatures.end()) {
+            // Parse message
+            func(is);
+
+            message_signatures.emplace_back(from_id, msg_id);
+        }
+
+        // Parse message
         func(is);
+
         asio::async_read_until(socket, in_buf, '\n', std::bind(&Connection::read_callback,
                                                                shared_from_this(), _1, _2));
     } else if (ec != asio::error::eof) {
@@ -216,6 +252,7 @@ void Connection::write_callback(const asio::error_code& ec, size_t num)
 
 void Connection::read_chat(std::istream& is)
 {
+    // TODO Error checking for data the chat callback receives
     std::string line;
     std::getline(is, line);
     std::cout << "Chat from " << id << ": " << line << std::endl;

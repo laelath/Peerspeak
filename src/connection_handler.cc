@@ -256,7 +256,7 @@ void ConnectionHandler::punch_conn_callback(const asio::error_code& ec)
     if (!ec) {
         acceptor.cancel();
         auto conn = std::make_shared<Connection>(io_service, std::move(conn_sock), window,
-                                                 connections);
+                                                 connections, message_signatures);
         std::cout << "Punchthrough successful, starting connection" << std::endl;
         conn->start_connection(id);
     } else
@@ -269,7 +269,7 @@ void ConnectionHandler::punch_acpt_callback(const asio::error_code& ec)
     if (!ec) {
         conn_sock.cancel();
         auto conn = std::make_shared<Connection>(io_service, std::move(acpt_sock), window,
-                                                 connections);
+                                                 connections, message_signatures);
         std::cout << "Punchthrough successful, starting connection" << std::endl;
         conn->start_connection(id);
     } else
