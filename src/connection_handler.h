@@ -15,11 +15,11 @@ class PeerspeakWindow;
 // Handles a connection to a discovery server and peer discovery and initiation
 class ConnectionHandler {
 public:
-    ConnectionHandler();
+    ConnectionHandler(PeerspeakWindow *window);
     ~ConnectionHandler();
 
     // Initialize the connection handler
-    void init(PeerspeakWindow *window, std::string ip, uint16_t port, uint64_t id);
+    void init(std::string ip, uint16_t port, uint64_t id);
 
     // Start accepting connections
     void start();
@@ -35,7 +35,8 @@ public:
     void send_chat(std::string msg);
 
     // Close connections, called on program exit
-    void send_close();
+    //void send_close();
+    void stop();
 
 private:
     void read_callback(const asio::error_code& ec, size_t num);
@@ -62,11 +63,14 @@ private:
     PeerspeakWindow *window;
 
     uint64_t id;
+    uint16_t count = 1;
 
     std::map<uint64_t, std::weak_ptr<Connection>> connections;
 
     // Message signatures for forwarding
     std::vector<std::pair<uint64_t, uint16_t>> message_signatures;
+
+    friend class Connection;
 };
 
 } // namespace peerspeak

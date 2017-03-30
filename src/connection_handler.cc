@@ -16,11 +16,14 @@ namespace peerspeak {
 
 using namespace std::placeholders;
 
-ConnectionHandler::ConnectionHandler()
+const constexpr size_t message_header_length = sizeof(uint8_t) + sizeof(uint16_t);
+
+ConnectionHandler::ConnectionHandler(PeerspeakWindow *window)
     : acceptor(io_service),
       socket(io_service),
       conn_sock(io_service),
-      acpt_sock(io_service)
+      acpt_sock(io_service),
+      window(window)
 {
     socket.open(asio::ip::tcp::v4());
     socket.set_option(asio::ip::tcp::socket::reuse_address(true));
@@ -38,9 +41,8 @@ ConnectionHandler::~ConnectionHandler()
     window->show_error("Critical: lost connection to discovery server");
 }
 
-void ConnectionHandler::init(PeerspeakWindow *window, std::string ip, uint16_t port, uint64_t id)
+void ConnectionHandler::init(std::string ip, uint16_t port, uint64_t id)
 {
-    this->window = window;
     this->id = id;
 
     asio::ip::address addr = asio::ip::address::from_string(ip);
@@ -56,8 +58,8 @@ void ConnectionHandler::start()
 {
     uint64_t temp_id = htonll(id);
     write_message(OPEN, asio::buffer(&temp_id, sizeof(temp_id)));
-    asio::async_read_until(socket, in_buf, '\n', std::bind(&ConnectionHandler::read_callback,
-                                                           this, _1, _2));
+    asio::async_read(socket, in_buf, asio::transfer_exactly(message_header_length),
+                     std::bind(&ConnectionHandler::read_callback, this, _1, _2));
     io_service.run();
 }
 
@@ -65,28 +67,36 @@ void ConnectionHandler::write_message(MessageType type, const asio::const_buffer
 {
     switch (type) {
     case CONNECT:
-        if (asio::buffer_size(buf) != 4)
-            throw std::invalid_argument("CONNECT expected an IPv4 address");
-        break;
+        throw std::invalid_argument("Cannot send CONNECT to discovery server");
     case OPEN:
         if (asio::buffer_size(buf) != 8)
             throw std::invalid_argument("OPEN expected a uint64_t id");
+        break;
+    case ADD:
+        throw std::invalid_argument("Cannot send ADD to discovery server");
         break;
     case ACCEPT:
         if (asio::buffer_size(buf) != 1)
             throw std::invalid_argument("ACCEPT expected a boolean byte");
         break;
     case ERROR:
+        throw std::invalid_argument("Cannot send ERROR to discovery server");
     case CHAT:
-        break;
+        throw std::invalid_argument("Cannot send CHAT to discovery server");
     case INVALID:
         throw std::invalid_argument("Cannot send INVALID message");
     }
 
-    std::string header = get_message_string(type) + " "
-        + std::to_string(asio::buffer_size(buf)) + "\n";
-    std::array<asio::const_buffer, 2> data = {
-        asio::buffer(header),
+    //uint64_t net_id = htonll(id);
+    //uint16_t net_count = htons(count);
+    uint8_t net_type = type;
+    uint16_t net_size = htons(asio::buffer_size(buf));
+
+    std::array<asio::const_buffer, 3> data = {
+        //asio::buffer(&net_id, sizeof net_id),
+        //asio::buffer(&net_count, sizeof net_count),
+        asio::buffer(&net_type, sizeof net_type),
+        asio::buffer(&net_size, sizeof net_size),
         buf };
     asio::async_write(socket, data, asio::transfer_all(),
                       std::bind(&ConnectionHandler::write_callback, this, _1, _2));
@@ -96,7 +106,8 @@ void ConnectionHandler::write_message_all(MessageType type, const asio::const_bu
 {
     for (auto conn : connections)
         if (not conn.second.expired())
-            conn.second.lock()->write_message(type, buf);
+            conn.second.lock()->write_message(count, type, buf);
+    count++;
 }
 
 void ConnectionHandler::send_open(uint64_t other_id)
@@ -124,7 +135,7 @@ void ConnectionHandler::send_chat(std::string msg)
         });
 }
 
-void ConnectionHandler::send_close()
+/*void ConnectionHandler::send_close()
 {
     io_service.dispatch(
         [this]() {
@@ -133,26 +144,28 @@ void ConnectionHandler::send_close()
                 if (not conn.second.expired())
                     conn.second.lock()->close();
         });
+}*/
+
+void ConnectionHandler::stop()
+{
+    io_service.stop();
 }
 
 void ConnectionHandler::read_callback(const asio::error_code& ec, size_t num)
 {
     if (!ec) {
-        std::string line;
         std::istream is(&in_buf);
-        std::getline(is, line);
 
-        size_t idx = line.find(' ');
-        MessageType type = parse_message_type(line.substr(0, idx));
+        // Messages from discovery server doesn't have fingerprint
 
-        size_t bytes;
-        try {
-            bytes = std::stoul(line.substr(idx + 1));
-        } catch (std::invalid_argument& e) {
-            return;
-        } catch (std::out_of_range& e) {
-            return;
-        }
+        uint8_t type_num;
+        uint16_t bytes;
+
+        is.read(reinterpret_cast<char *>(&type_num), sizeof type_num);
+        is.read(reinterpret_cast<char *>(&bytes), sizeof bytes);
+
+        MessageType type = static_cast<MessageType>(type_num);
+        bytes = ntohs(bytes);
 
         std::function<void(std::istream&)> read_func;
 
@@ -170,22 +183,16 @@ void ConnectionHandler::read_callback(const asio::error_code& ec, size_t num)
         case ERROR:
             read_func = std::bind(&ConnectionHandler::read_error, this, _1);
             break;
+        case ADD:
         case ACCEPT:
         case CHAT:
         case INVALID:
+            // These messages should not be sent by discovery server
             return;
         }
 
-        size_t read = 0;
-        if (bytes > in_buf.size())
-            read = bytes - in_buf.size();
-
-        if (bytes < in_buf.size())
-            read_buffer(asio::error_code(), 0, read_func);
-        else
-            asio::async_read(socket, in_buf, asio::transfer_exactly(bytes - in_buf.size()), 
-                             std::bind(&ConnectionHandler::read_buffer, this,
-                                       _1, _2, read_func));
+        asio::async_read(socket, in_buf, asio::transfer_exactly(bytes), 
+                         std::bind(&ConnectionHandler::read_buffer, this, _1, _2, read_func));
     } else if (ec != asio::error::eof) {
         std::cerr << "Asio read error: " << ec.value() << ", " << ec.message() << std::endl;
     }
@@ -197,8 +204,8 @@ void ConnectionHandler::read_buffer(const asio::error_code& ec, size_t num,
     if (!ec) {
         std::istream is(&in_buf);
         func(is);
-        asio::async_read_until(socket, in_buf, '\n', std::bind(&ConnectionHandler::read_callback,
-                                                               this, _1, _2));
+        asio::async_read(socket, in_buf, asio::transfer_exactly(message_header_length),
+                         std::bind(&ConnectionHandler::read_callback, this, _1, _2));
     } else if (ec != asio::error::eof) {
         std::cerr << "Asio read error: " << ec.value() << ", " << ec.message() << std::endl;
     }
@@ -255,10 +262,9 @@ void ConnectionHandler::punch_conn_callback(const asio::error_code& ec)
 {
     if (!ec) {
         acceptor.cancel();
-        auto conn = std::make_shared<Connection>(io_service, std::move(conn_sock), window,
-                                                 connections, message_signatures);
-        std::cout << "Punchthrough successful, starting connection" << std::endl;
-        conn->start_connection(id);
+        auto conn = std::make_shared<Connection>(std::move(conn_sock), this);
+        std::cout << "Punchthrough connect successful, starting connection" << std::endl;
+        conn->start_connection();
     } else
         std::cerr << "Punchthrough connect error " << ec.value() << ", " << ec.message()
                   << std::endl;
@@ -268,10 +274,9 @@ void ConnectionHandler::punch_acpt_callback(const asio::error_code& ec)
 {
     if (!ec) {
         conn_sock.cancel();
-        auto conn = std::make_shared<Connection>(io_service, std::move(acpt_sock), window,
-                                                 connections, message_signatures);
-        std::cout << "Punchthrough successful, starting connection" << std::endl;
-        conn->start_connection(id);
+        auto conn = std::make_shared<Connection>(std::move(acpt_sock), this);
+        std::cout << "Punchthrough accept successful, starting connection" << std::endl;
+        conn->start_connection();
     } else
         std::cerr << "Punchthrough accept error " << ec.value() << ", " << ec.message()
                   << std::endl;

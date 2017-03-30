@@ -7,7 +7,8 @@ namespace peerspeak {
 PeerspeakWindow::PeerspeakWindow(BaseObjectType *cobject,
                                  const Glib::RefPtr<Gtk::Builder>& builder)
     : Gtk::ApplicationWindow(cobject),
-      builder(builder)
+      builder(builder),
+      handler(this)
 {
     init_widgets();
     connect_signals();
@@ -18,7 +19,10 @@ PeerspeakWindow::PeerspeakWindow(BaseObjectType *cobject,
 
 PeerspeakWindow::~PeerspeakWindow()
 {
-    handler.send_close();
+    //handler.send_close();
+    //if (network_thread.joinable())
+        //network_thread.join();
+    handler.stop();
     if (network_thread.joinable())
         network_thread.join();
 }
@@ -127,8 +131,9 @@ void PeerspeakWindow::init_networking()
         if (init_port_entry->get_text().length() > 0)
             port = std::stoi(init_port_entry->get_text());
 
-        network_thread = std::thread(std::bind(&ConnectionHandler::init, &handler,
-                                               this, init_ip_entry->get_text(), port, id));
+        handler.init(init_ip_entry->get_text(), port, id);
+
+        network_thread = std::thread(std::bind(&ConnectionHandler::start, &handler));
     } else
         std::cout << "Critical: Discovery server information not given" << std::endl;
     init_dialog->close();

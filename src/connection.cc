@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "connection_handler.h"
 #include "peerspeak_window.h"
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
@@ -16,25 +17,23 @@ namespace peerspeak {
 
 using namespace std::placeholders;
 
-Connection::Connection(asio::io_service& io_service, asio::ip::tcp::socket sock,
-                       PeerspeakWindow *window,
-                       std::map<uint64_t, std::weak_ptr<Connection>>& conns,
-                       std::vector<std::pair<uint64_t, uint16_t>>& sigs)
+const constexpr size_t message_header_length = sizeof(uint64_t) + sizeof(uint16_t)
+                                             + sizeof(uint8_t) + sizeof(uint16_t);
+
+Connection::Connection(asio::ip::tcp::socket sock, ConnectionHandler *handler)
     : socket(std::move(sock)),
-      timer(io_service, std::chrono::seconds(10)),
-      connections(conns),
-      message_signatures(sigs)
+      timer(handler->io_service, std::chrono::seconds(10)),
+      handler(handler)
 {
-    this->window = window;
 }
 
 Connection::~Connection()
 {
-    auto pos = connections.find(id);
-    if (pos != connections.end()) {
-        connections.erase(pos);
+    auto pos = handler->connections.find(id);
+    if (pos != handler->connections.end()) {
+        handler->connections.erase(pos);
         std::cout << "Connection ID " << id << " closed" << std::endl;
-        window->recv_disconnect(id);
+        handler->window->recv_disconnect(id);
     }
 }
 
@@ -48,24 +47,34 @@ asio::ip::tcp::endpoint Connection::get_endpoint()
     return socket.remote_endpoint();
 }
 
-void Connection::start_connection(uint64_t this_id)
+void Connection::start_connection()
 {
-    uint64_t temp_id = htonll(this_id);
-    write_message(OPEN, asio::buffer(&temp_id, sizeof(temp_id)));
+    //uint64_t temp_id = htonll(this_id);
+    //write_message(OPEN, asio::buffer(&temp_id, sizeof(temp_id)));
+    uint8_t type = OPEN;
+    uint16_t bytes = htons(sizeof handler->id);
+    uint64_t temp_id = htonll(handler->id);
+    std::array<asio::const_buffer, 3> data = {
+        asio::buffer(&type, sizeof type),
+        asio::buffer(&bytes, sizeof bytes),
+        asio::buffer(&temp_id, sizeof temp_id)
+    };
+    asio::async_write(socket, data, asio::transfer_all(), std::bind(&Connection::write_callback,
+                                                                    shared_from_this(), _1, _2));
     auto self = shared_from_this();
     timer.async_wait(
         [this, self](const asio::error_code& ec) {
             if (!ec) {
                 std::cout << "Error: Socket timed out" << std::endl;
-                window->show_error("Error: Socket timed out");
+                handler->window->show_error("Error: Socket timed out");
                 socket.close();
             }
         });
-    asio::async_read_until(socket, in_buf, '\n', std::bind(&Connection::read_start_message,
-                                                           self, _1, _2));
+    asio::async_read(socket, in_buf, asio::transfer_exactly(sizeof(type) + sizeof(bytes)),
+                     std::bind(&Connection::read_start_message, self, _1, _2));
 }
 
-void Connection::write_message(MessageType type, const asio::const_buffer& buf)
+void Connection::write_message(uint16_t msg_id, MessageType type, const asio::const_buffer& buf)
 {
     switch (type) {
     case CONNECT:
@@ -91,15 +100,17 @@ void Connection::write_message(MessageType type, const asio::const_buffer& buf)
         throw std::invalid_argument("Cannot send INVALID message");
     }
 
-    uint64_t temp_id = htonll(id);
-    uint16_t temp_count = htons(count);
-    std::string header = get_message_string(type) + " "
-        + std::to_string(asio::buffer_size(buf)) + "\n";
-    std::vector<asio::const_buffer> data;
-    data.push_back(asio::buffer(&temp_id, sizeof(temp_id)));
-    data.push_back(asio::buffer(&temp_count, sizeof(temp_count)));
-    data.push_back(asio::buffer(header));
-    data.push_back(buf);
+    uint64_t temp_id = htonll(handler->id);
+    uint16_t temp_count = htons(msg_id); // Get count and increment it
+    uint8_t temp_type = type;
+    uint16_t bytes = htons(asio::buffer_size(buf));
+    std::array<asio::const_buffer, 5> data = {
+        asio::buffer(&temp_id, sizeof temp_id),
+        asio::buffer(&temp_count, sizeof temp_count),
+        asio::buffer(&temp_type, sizeof temp_type),
+        asio::buffer(&bytes, sizeof bytes),
+        buf
+    };
     asio::async_write(socket, data, asio::transfer_all(), std::bind(&Connection::write_callback,
                                                                     shared_from_this(), _1, _2));
 }
@@ -107,28 +118,22 @@ void Connection::write_message(MessageType type, const asio::const_buffer& buf)
 void Connection::read_start_message(const asio::error_code& ec, size_t num)
 {
     if (!ec) {
-        std::string line;
         std::istream is(&in_buf);
-        std::getline(is, line);
-        size_t idx = line.find(' ');
-        if (line.substr(0, idx) != "OPEN")
+
+        uint8_t net_type;
+        uint16_t bytes;
+
+        is.read(reinterpret_cast<char *>(&net_type), sizeof net_type);
+        is.read(reinterpret_cast<char *>(&bytes), sizeof bytes);
+
+        MessageType type = static_cast<MessageType>(net_type);
+        bytes = ntohs(bytes);
+
+        if (type != OPEN)
             return;
-        size_t bytes;
-        try {
-            bytes = std::stoul(line.substr(idx + 1));
-            if (bytes != 8)
-                return;
-        } catch (std::invalid_argument& e) {
-            return;
-        } catch (std::out_of_range& e) {
-            return;
-        }
-        if (bytes > in_buf.size())
-            asio::async_read(socket, in_buf, asio::transfer_exactly(bytes - in_buf.size()),
-                             std::bind(&Connection::read_start_buffer,
-                                       shared_from_this(), _1, _2));
-        else
-            read_start_buffer(asio::error_code(), 0);
+
+        asio::async_read(socket, in_buf, asio::transfer_exactly(bytes),
+                         std::bind(&Connection::read_start_buffer, shared_from_this(), _1, _2));
     }
 }
 
@@ -138,10 +143,10 @@ void Connection::read_start_buffer(const asio::error_code& ec, size_t num)
         timer.cancel();
         auto self = shared_from_this();
         std::istream is(&in_buf);
-        is.read(reinterpret_cast<char *>(&id), sizeof(id));
+        is.read(reinterpret_cast<char *>(&id), sizeof id);
         id = ntohll(id);
-        if (connections.find(id) == connections.end())
-            connections[id] = self;
+        if (handler->connections.find(id) == handler->connections.end())
+            handler->connections[id] = self;
         else
             return;
 
@@ -149,31 +154,33 @@ void Connection::read_start_buffer(const asio::error_code& ec, size_t num)
         std::string msg = "Established connection from " + end.address().to_string() + ":"
             + std::to_string(end.port()) + ", ID " + std::to_string(id);
         std::cout << msg << std::endl;
-        window->recv_connect(id);
-        asio::async_read_until(socket, in_buf, '\n', std::bind(&Connection::read_callback,
-                                                               self, _1, _2));
+        handler->window->recv_connect(id);
+        asio::async_read(socket, in_buf, asio::transfer_exactly(message_header_length),
+                         std::bind(&Connection::read_callback, self, _1, _2));
+
+        // TODO Send ADD message to peers for new connection
     }
 }
 
 void Connection::read_callback(const asio::error_code& ec, size_t num)
 {
     if (!ec) {
-        std::string line;
         std::istream is(&in_buf);
-        std::getline(is, line);
 
-        size_t idx = line.find(' ');
-        MessageType type = parse_message_type(line.substr(0, idx));
+        uint64_t sender_id;
+        uint16_t msg_id;
+        uint8_t net_type;
+        uint16_t bytes;
 
-        size_t bytes = 0;
-        try {
-            bytes = std::stoul(line.substr(idx + 1));
-        } catch (std::invalid_argument& e) {
-            return;
-        } catch (std::out_of_range& e) {
-            return;
-        }
-        bytes += sizeof(id) + sizeof(count);
+        is.read(reinterpret_cast<char *>(&sender_id), sizeof sender_id);
+        is.read(reinterpret_cast<char *>(&msg_id), sizeof msg_id);
+        is.read(reinterpret_cast<char *>(&net_type), sizeof net_type);
+        is.read(reinterpret_cast<char *>(&bytes), sizeof bytes);
+
+        sender_id = ntohll(sender_id);
+        msg_id = ntohs(msg_id);
+        MessageType type = static_cast<MessageType>(net_type);
+        bytes = ntohs(bytes);
 
         std::function<void(std::istream&)> read_func;
         auto self = shared_from_this();
@@ -200,13 +207,14 @@ void Connection::read_callback(const asio::error_code& ec, size_t num)
             return;
         }
 
-        if (bytes > in_buf.size())
-            asio::async_read(socket, in_buf, asio::transfer_exactly(bytes - in_buf.size()),
-                             std::bind(&Connection::read_buffer, self, _1, _2, read_func));
-        else
-            read_buffer(asio::error_code(), 0, read_func);
+        if (std::find(handler->message_signatures.begin(), handler->message_signatures.end(),
+                      std::make_pair(sender_id, msg_id)) == handler->message_signatures.end())
+            read_func = std::bind(&Connection::read_ignore, self, _1);
+
+        asio::async_read(socket, in_buf, asio::transfer_exactly(bytes),
+                         std::bind(&Connection::read_buffer, self, _1, _2, read_func));
     } else if (ec != asio::error::eof)
-        std::cerr << "Asio error: ID " << id << " " << ec.value() << ", " << ec.message()
+        std::cerr << "Asio read error: ID " << id << " " << ec.value() << ", " << ec.message()
                   << std::endl;
 }
 
@@ -215,30 +223,14 @@ void Connection::read_buffer(const asio::error_code& ec, size_t num,
 {
     if (!ec) {
         std::istream is(&in_buf);
-        // Read fingerprint
-        // TODO Error checking for message fingerprint
-        uint64_t from_id;
-        uint16_t msg_id;
-        is.read(reinterpret_cast<char *>(&from_id), sizeof from_id);
-        is.read(reinterpret_cast<char *>(&msg_id), sizeof msg_id);
-        from_id = ntohll(from_id);
-        msg_id = ntohs(msg_id);
-
-        if (std::find(message_signatures.begin(), message_signatures.end(),
-                      std::make_pair(from_id, msg_id)) == message_signatures.end()) {
-            // Parse message
-            func(is);
-
-            message_signatures.emplace_back(from_id, msg_id);
-        }
 
         // Parse message
         func(is);
 
-        asio::async_read_until(socket, in_buf, '\n', std::bind(&Connection::read_callback,
-                                                               shared_from_this(), _1, _2));
+        asio::async_read(socket, in_buf, asio::transfer_exactly(message_header_length),
+                         std::bind(&Connection::read_callback, shared_from_this(), _1, _2));
     } else if (ec != asio::error::eof) {
-        std::cerr << "Asio error: ID " << id << " " << ec.value() << ", " << ec.message()
+        std::cerr << "Asio read error: ID " << id << " " << ec.value() << ", " << ec.message()
                   << std::endl;
     }
 }
@@ -246,7 +238,7 @@ void Connection::read_buffer(const asio::error_code& ec, size_t num,
 void Connection::write_callback(const asio::error_code& ec, size_t num)
 {
     if (ec && ec != asio::error::eof)
-        std::cerr << "Asio error: ID " << id << " " << ec.value() << ", " << ec.message()
+        std::cerr << "Asio write error: ID " << id << " " << ec.value() << ", " << ec.message()
                   << std::endl;
 }
 
@@ -256,7 +248,12 @@ void Connection::read_chat(std::istream& is)
     std::string line;
     std::getline(is, line);
     std::cout << "Chat from " << id << ": " << line << std::endl;
-    window->recv_chat(id, line);
+    handler->window->recv_chat(id, line);
+}
+
+void Connection::read_ignore(std::istream &is)
+{
+    is.clear();
 }
 
 } // namespace peerspeak

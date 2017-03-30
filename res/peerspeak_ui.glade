@@ -42,10 +42,11 @@
                     <property name="can_focus">False</property>
                     <child>
                       <object class="GtkImageMenuItem">
-                        <property name="label">imagemenuitem</property>
+                        <property name="label">_Open Connection</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="action_name">win.open-connection</property>
+                        <property name="use_underline">True</property>
                         <property name="image">open_connection_image</property>
                         <property name="use_stock">False</property>
                       </object>
@@ -173,17 +174,33 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="margin_left">5</property>
+                    <property name="margin_right">2</property>
                     <property name="margin_top">5</property>
                     <child>
                       <object class="GtkBox">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">5</property>
                         <child>
-                          <object class="GtkImage" id="connection_volume_image">
+                          <object class="GtkBox" id="direct_connections_box">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="valign">start</property>
-                            <property name="resource">/us/laelath/peerspeak/audio_idle.svg</property>
+                            <property name="orientation">vertical</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="halign">start</property>
+                                <property name="label" translatable="yes">&lt;b&gt;Direct Connections&lt;/b&gt;</property>
+                                <property name="use_markup">True</property>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -192,11 +209,9 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkImage" id="connection_status_image">
+                          <object class="GtkSeparator">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="valign">start</property>
-                            <property name="resource">/us/laelath/peerspeak/connection_idle.svg</property>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -205,26 +220,23 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkExpander">
+                          <object class="GtkBox" id="network_connections_box">
                             <property name="visible">True</property>
-                            <property name="can_focus">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="orientation">vertical</property>
                             <child>
-                              <object class="GtkBox" id="connection_list_box">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="orientation">vertical</property>
-                                <child>
-                                  <placeholder/>
-                                </child>
-                              </object>
-                            </child>
-                            <child type="label">
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">Connections</property>
+                                <property name="halign">start</property>
+                                <property name="label" translatable="yes">&lt;b&gt;Network Connections&lt;/b&gt;</property>
                                 <property name="use_markup">True</property>
                               </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
                             </child>
                           </object>
                           <packing>
@@ -261,14 +273,14 @@
                       <object class="GtkViewport">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="margin_left">2</property>
+                        <property name="margin_right">5</property>
                         <property name="margin_top">5</property>
                         <child>
                           <object class="GtkBox" id="chat_box">
                             <property name="name">chat</property>
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="margin_left">3</property>
-                            <property name="margin_right">3</property>
                             <property name="orientation">vertical</property>
                             <property name="spacing">3</property>
                             <child>

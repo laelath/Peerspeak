@@ -11,6 +11,7 @@
 
 namespace peerspeak {
 
+class ConnectionHandler;
 class PeerspeakWindow;
 
 // Class that manages a single connection, must always be a shared_ptr.
@@ -18,9 +19,7 @@ class Connection
     : public std::enable_shared_from_this<Connection> {
 public:
     // Creates a connection that manages sock and is stored in conns.
-    Connection(asio::io_service& io_service, asio::ip::tcp::socket sock, PeerspeakWindow *window,
-               std::map<uint64_t, std::weak_ptr<Connection>>& conns,
-               std::vector<std::pair<uint64_t, uint16_t>>& sigs);
+    Connection(asio::ip::tcp::socket sock, ConnectionHandler *handler);
     ~Connection();
 
     void close();
@@ -29,10 +28,10 @@ public:
     asio::ip::tcp::endpoint get_endpoint();
 
     // Starts the connection
-    void start_connection(uint64_t this_id);
+    void start_connection();
 
     // Queues a message to write, checks to make sure it's in the right format.
-    void write_message(MessageType type, const asio::const_buffer& buf);
+    void write_message(uint16_t msg_id, MessageType type, const asio::const_buffer& buf);
 
 private:
     // Initializers for connection
@@ -49,18 +48,15 @@ private:
 
     void read_chat(std::istream& is);
     //void read_connect(std::istream& is);
+    void read_ignore(std::istream &is);
 
     asio::ip::tcp::socket socket;
     asio::basic_waitable_timer<std::chrono::steady_clock> timer;
     asio::streambuf in_buf;
 
-    PeerspeakWindow *window;
+    ConnectionHandler *handler;
 
     uint64_t id;
-    uint16_t count;
-
-    std::map<uint64_t, std::weak_ptr<Connection>>& connections;
-    std::vector<std::pair<uint64_t, uint16_t>>& message_signatures;
 };
 
 } // namespace peerspeak
