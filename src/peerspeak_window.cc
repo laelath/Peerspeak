@@ -193,7 +193,7 @@ void PeerspeakWindow::chat_callback()
     std::unique_lock<std::mutex> lock(chat_mutex);
     if (not chat_queue.empty()) {
         auto chat = chat_queue.front();
-        add_chat(chat.second, std::to_string(chat.first));
+        add_chat(chat.second, chat.first);
         chat_queue.pop();
     }
 }
@@ -219,7 +219,7 @@ void PeerspeakWindow::add_connect(uint64_t id)
     auto label = std::make_unique<Gtk::Label>();
     label->set_markup(std::to_string(id) + " connected");
     label->set_halign(Gtk::Align::ALIGN_START);
-    label->set_xalign(0);
+    //label->set_xalign(0);
     label->show();
     chat_box->pack_start(*label, false, true);
     chat_labels.push_back(std::move(label));
@@ -230,18 +230,18 @@ void PeerspeakWindow::add_disconnect(uint64_t id)
     auto label = std::make_unique<Gtk::Label>();
     label->set_markup(std::to_string(id) + " disconnected");
     label->set_halign(Gtk::Align::ALIGN_START);
-    label->set_xalign(0);
+    //label->set_xalign(0);
     label->show();
     chat_box->pack_start(*label, false, true);
     chat_labels.push_back(std::move(label));
 }
 
-void PeerspeakWindow::add_chat(std::string msg, std::string user)
+void PeerspeakWindow::add_chat(std::string msg, uint64_t peer_id)
 {
     auto label = std::make_unique<Gtk::Label>();
     label->set_markup(msg);
     label->set_halign(Gtk::Align::ALIGN_START);
-    label->set_xalign(0);
+    //label->set_xalign(0);
     label->set_line_wrap(true);
     label->set_selectable(true);
     label->get_style_context()->add_class("chat");
@@ -249,13 +249,20 @@ void PeerspeakWindow::add_chat(std::string msg, std::string user)
     chat_box->pack_start(*label, false, true);
     chat_labels.push_back(std::move(label));
 
-    auto user_label = std::make_unique<Gtk::Label>();
-    user_label->set_markup(msg);
-    user_label->set_halign(Gtk::Align::ALIGN_START);
-    user_label->set_xalign(0);
-    user_label->show();
-    chat_box->pack_start(*user_label, false, true);
-    chat_labels.push_back(std::move(user_label));
+    if (prev_user == peer_id) {
+        chat_box->remove(**prev_user_label);
+        chat_box->pack_start(**prev_user_label, false, true);
+    } else {
+        auto user_label = std::make_unique<Gtk::Label>();
+        user_label->set_markup(std::to_string(peer_id));
+        user_label->set_halign(Gtk::Align::ALIGN_START);
+        //user_label->set_xalign(0);
+        user_label->show();
+        chat_box->pack_start(*user_label, false, true);
+        chat_labels.push_back(std::move(user_label));
+        prev_user = peer_id;
+        prev_user_label = --chat_labels.end();
+    }
 }
 
 void PeerspeakWindow::add_chat(std::string msg)
@@ -263,13 +270,14 @@ void PeerspeakWindow::add_chat(std::string msg)
     auto label = std::make_unique<Gtk::Label>();
     label->set_markup(msg);
     label->set_halign(Gtk::Align::ALIGN_END);
-    label->set_xalign(1);
+    //label->set_xalign(1);
     label->set_line_wrap(true);
     label->set_selectable(true);
     label->get_style_context()->add_class("chat");
     label->show();
     chat_box->pack_start(*label, false, true);
     chat_labels.push_back(std::move(label));
+    prev_user = 0;
 }
 
 void PeerspeakWindow::add_entry_chat()

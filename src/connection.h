@@ -12,7 +12,6 @@
 namespace peerspeak {
 
 class ConnectionHandler;
-class PeerspeakWindow;
 
 // Class that manages a single connection, must always be a shared_ptr.
 class Connection
@@ -40,15 +39,14 @@ private:
 
     // Callback for reading messages from socket.
     void read_callback(const asio::error_code& ec, size_t num);
-    void read_buffer(const asio::error_code& ec, size_t num,
-                     std::function<void(std::istream&)> func);
+    void read_buffer(const asio::error_code& ec, size_t num, uint64_t sender_id,
+                     uint16_t msg_id, MessageType type, uint16_t num_bytes);
 
     // Callback for writing messages to socket.
     void write_callback(const asio::error_code& ec, size_t num);
 
-    void read_chat(std::istream& is);
+    void read_chat(uint8_t *buf, uint16_t num_bytes, uint64_t sender_id);
     //void read_connect(std::istream& is);
-    void read_ignore(std::istream &is);
 
     asio::ip::tcp::socket socket;
     asio::basic_waitable_timer<std::chrono::steady_clock> timer;
@@ -57,6 +55,8 @@ private:
     ConnectionHandler *handler;
 
     uint64_t id;
+
+    friend class ConnectionHandler;
 };
 
 } // namespace peerspeak

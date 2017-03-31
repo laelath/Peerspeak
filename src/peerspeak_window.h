@@ -1,10 +1,11 @@
 #ifndef peerspeak_window_h_INCLUDED
 #define peerspeak_window_h_INCLUDED
 
+#include <list>
 #include <memory>
 #include <queue>
 #include <thread>
-#include <vector>
+//#include <vector>
 
 #include <gtkmm.h>
 
@@ -28,7 +29,6 @@ public:
 private:
     Glib::RefPtr<Gtk::Builder> builder;
 
-    //Gtk::TreeView *connections_view;
     Gtk::Box *chat_box;
     Gtk::Entry *chat_entry;
 
@@ -49,7 +49,9 @@ private:
     Gtk::Button *open_connect_button;
     Gtk::Button *open_cancel_button;
 
-    std::vector<std::unique_ptr<Gtk::Label>> chat_labels;
+    std::list<std::unique_ptr<Gtk::Label>> chat_labels;
+    std::list<std::unique_ptr<Gtk::Label>>::iterator prev_user_label;
+    uint64_t prev_user;
 
     std::thread network_thread;
     ConnectionHandler handler;
@@ -88,7 +90,7 @@ private:
     void add_connect(uint64_t id);
     void add_disconnect(uint64_t id);
 
-    void add_chat(std::string msg, std::string user);
+    void add_chat(std::string msg, uint64_t peer_id);
     void add_chat(std::string msg);
     void add_entry_chat();
 };
