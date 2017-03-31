@@ -42,11 +42,6 @@ void Connection::close()
     socket.close();
 }
 
-asio::ip::tcp::endpoint Connection::get_endpoint()
-{
-    return socket.remote_endpoint();
-}
-
 void Connection::start_connection()
 {
     //uint64_t temp_id = htonll(this_id);
@@ -150,7 +145,8 @@ void Connection::read_start_buffer(const asio::error_code& ec, size_t num)
         else
             return;
 
-        auto end = get_endpoint();
+        // TODO VERY CRITICAL This errors for some reason when re-establishing connections
+        auto end = socket.remote_endpoint();
         std::string msg = "Established connection from " + end.address().to_string() + ":"
             + std::to_string(end.port()) + ", ID " + std::to_string(id);
         std::cout << msg << std::endl;

@@ -23,9 +23,6 @@ public:
 
     void close();
 
-    // Get the IP address of the connection
-    asio::ip::tcp::endpoint get_endpoint();
-
     // Starts the connection
     void start_connection();
 
