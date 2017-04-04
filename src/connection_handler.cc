@@ -15,6 +15,7 @@
 namespace peerspeak {
 
 using namespace std::placeholders;
+using namespace std::chrono_literals;
 
 const constexpr size_t message_header_length = sizeof(uint8_t) + sizeof(uint16_t);
 
@@ -28,11 +29,14 @@ ConnectionHandler::ConnectionHandler(PeerspeakWindow *window)
     socket.open(asio::ip::tcp::v4());
     socket.set_option(asio::ip::tcp::socket::reuse_address(true));
 
-    conn_sock.open(asio::ip::tcp::v4());
-    conn_sock.set_option(asio::ip::tcp::socket::reuse_address(true));
+    //conn_sock.open(asio::ip::tcp::v4());
+    //conn_sock.set_option(asio::ip::tcp::socket::reuse_address(true));
 
-    acceptor.open(socket.local_endpoint().protocol());
-    acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+    //acpt_sock.open(asio::ip::tcp::v4());
+    //acpt_sock.set_option(asio::ip::tcp::socket::reuse_address(true));
+
+    //acceptor.open(socket.local_endpoint().protocol());
+    //acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
 }
 
 ConnectionHandler::~ConnectionHandler()
@@ -49,9 +53,9 @@ void ConnectionHandler::init(std::string ip, uint16_t port, uint64_t id)
     asio::ip::tcp::endpoint end(addr, port);
 
     socket.connect(end);
-    conn_sock.bind(socket.local_endpoint());
-    acceptor.bind(socket.local_endpoint());
-    acceptor.listen(10);
+    //conn_sock.bind(socket.local_endpoint());
+    //acceptor.bind(socket.local_endpoint());
+    //acceptor.listen(10);
 }
 
 void ConnectionHandler::start()
@@ -254,8 +258,28 @@ void ConnectionHandler::punchthrough(asio::ip::tcp::endpoint& remote)
     std::cout << "Starting punchthrough to " << remote.address().to_string() << ":"
               << remote.port() << std::endl;
 
+    //auto conn_sock = std::make_shared<asio::ip::tcp::socket>(io_service);
+    //auto acpt_sock = std::make_shared<asio::ip::tcp::socket>(io_service);
+
+    acceptor.open(asio::ip::tcp::v4());
+    acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+    acceptor.bind(socket.local_endpoint());
+
+    //conn_sock->open(asio::ip::tcp::v4());
+    //conn_sock->set_option(asio::ip::tcp::socket::reuse_address(true));
+    //conn_sock->bind(socket.local_endpoint());
+
+    conn_sock.open(asio::ip::tcp::v4());
+    conn_sock.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+    conn_sock.bind(socket.local_endpoint());
+
+    acceptor.listen();
+
+    std::this_thread::sleep_for(10ms);
+
     acceptor.async_accept(acpt_sock, std::bind(&ConnectionHandler::punch_acpt_callback, this, _1));
     conn_sock.async_connect(remote, std::bind(&ConnectionHandler::punch_conn_callback, this, _1));
+    punch_count = 2;
 }
 
 void ConnectionHandler::punch_conn_callback(const asio::error_code& ec)
@@ -268,11 +292,13 @@ void ConnectionHandler::punch_conn_callback(const asio::error_code& ec)
     } else
         std::cerr << "Punchthrough connect error " << ec.value() << ", " << ec.message()
                   << std::endl;
+    punch_unref();
 }
 
 void ConnectionHandler::punch_acpt_callback(const asio::error_code& ec)
 {
     if (!ec) {
+        //conn_sock->cancel();
         conn_sock.cancel();
         auto conn = std::make_shared<Connection>(std::move(acpt_sock), this);
         std::cout << "Punchthrough accept successful, starting connection" << std::endl;
@@ -280,6 +306,15 @@ void ConnectionHandler::punch_acpt_callback(const asio::error_code& ec)
     } else
         std::cerr << "Punchthrough accept error " << ec.value() << ", " << ec.message()
                   << std::endl;
+    punch_unref();
+}
+
+void ConnectionHandler::punch_unref()
+{
+    if (--punch_count == 0) {
+        acceptor.close();
+        conn_sock.close();
+    }
 }
 
 } // namespace peerspeak

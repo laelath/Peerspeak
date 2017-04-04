@@ -52,11 +52,15 @@ private:
     void punch_conn_callback(const asio::error_code& ec);
     void punch_acpt_callback(const asio::error_code& ec);
 
+    void punch_unref();
+
     asio::io_service io_service;
     asio::ip::tcp::acceptor acceptor;
     asio::ip::tcp::socket socket;
     asio::ip::tcp::socket conn_sock;
     asio::ip::tcp::socket acpt_sock;
+
+    int punch_count;
 
     asio::streambuf in_buf;
 
