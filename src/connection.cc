@@ -96,7 +96,7 @@ void Connection::write_message(uint16_t msg_id, MessageType type, const asio::co
     }
 
     uint64_t temp_id = htonll(handler->id);
-    uint16_t temp_count = htons(msg_id); // Get count and increment it
+    uint16_t temp_count = htons(msg_id);
     uint8_t temp_type = type;
     uint16_t bytes = htons(asio::buffer_size(buf));
     std::array<asio::const_buffer, 5> data = {

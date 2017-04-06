@@ -48,6 +48,20 @@ void PeerspeakWindow::recv_disconnect(uint64_t id)
     disconnect_dispatcher();
 }
 
+void PeerspeakWindow::recv_add(uint64_t id)
+{
+    std::lock_guard<std::mutex> lock(add_mutex);
+    add_queue.push(id);
+    add_dispatcher();
+}
+
+void PeerspeakWindow::recv_remove(uint64_t id)
+{
+    std::lock_guard<std::mutex> lock(remove_mutex);
+    remove_queue.push(id);
+    remove_dispatcher();
+}
+
 void PeerspeakWindow::recv_chat(uint64_t id, std::string msg)
 {
     std::lock_guard<std::mutex> lock(chat_mutex);
@@ -143,7 +157,7 @@ void PeerspeakWindow::open_connection()
 {
     int status = open_dialog->run();
     if (status == Gtk::RESPONSE_APPLY) {
-        // TODO parse error handling
+        // TODO Connect id parse error handling
         uint64_t id = std::stoull(open_id_entry->get_text());
         handler.send_open(id);
     }
@@ -173,8 +187,10 @@ void PeerspeakWindow::connect_callback()
     std::unique_lock<std::mutex> lock(connect_mutex);
     if (not connect_queue.empty()) {
         uint64_t id = connect_queue.front();
-        add_connect(id);
         connect_queue.pop();
+        lock.unlock();
+
+        add_connect(id);
     }
 }
 
@@ -183,8 +199,34 @@ void PeerspeakWindow::disconnect_callback()
     std::unique_lock<std::mutex> lock(disconnect_mutex);
     if (not disconnect_queue.empty()) {
         uint64_t id = disconnect_queue.front();
-        add_disconnect(id);
         disconnect_queue.pop();
+        lock.unlock();
+
+        add_disconnect(id);
+    }
+}
+
+void PeerspeakWindow::add_callback()
+{
+    std::unique_lock<std::mutex> lock(add_mutex);
+    if (not add_queue.empty()) {
+        uint64_t id = add_queue.front();
+        add_queue.pop();
+        lock.unlock();
+
+
+    }
+}
+
+void PeerspeakWindow::remove_callback()
+{
+    std::unique_lock<std::mutex> lock(remove_mutex);
+    if (not remove_queue.empty()) {
+        uint64_t id = remove_queue.front();
+        remove_queue.pop();
+        lock.unlock();
+
+
     }
 }
 
@@ -193,8 +235,10 @@ void PeerspeakWindow::chat_callback()
     std::unique_lock<std::mutex> lock(chat_mutex);
     if (not chat_queue.empty()) {
         auto chat = chat_queue.front();
-        add_chat(chat.second, chat.first);
         chat_queue.pop();
+        lock.unlock();
+
+        add_chat(chat.second, chat.first);
     }
 }
 

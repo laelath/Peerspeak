@@ -2,6 +2,7 @@
 #define peerspeak_window_h_INCLUDED
 
 #include <list>
+#include <unordered_map>
 #include <memory>
 #include <queue>
 #include <thread>
@@ -10,6 +11,7 @@
 #include <gtkmm.h>
 
 #include "connection_handler.h"
+#include "connection_info.h"
 
 namespace peerspeak {
 
@@ -21,9 +23,11 @@ public:
     ~PeerspeakWindow();
 
     void recv_open(uint64_t id);
-    void recv_chat(uint64_t id, std::string msg);
     void recv_connect(uint64_t id);
     void recv_disconnect(uint64_t id);
+    void recv_add(uint64_t id);
+    void recv_remove(uint64_t id);
+    void recv_chat(uint64_t id, std::string msg);
     void show_error(std::string msg);
 
 private:
@@ -56,21 +60,32 @@ private:
     std::thread network_thread;
     ConnectionHandler handler;
 
+    std::unordered_map<uint64_t, std::pair<unsigned int, std::unique_ptr<ConnectionInfo>>>
+        direct_connections;
+    std::unordered_map<uint64_t, std::pair<unsigned int, std::unique_ptr<ConnectionInfo>>>
+        secondary_connections;
+
     Glib::Dispatcher open_dispatcher;
     Glib::Dispatcher connect_dispatcher;
     Glib::Dispatcher disconnect_dispatcher;
+    Glib::Dispatcher add_dispatcher;
+    Glib::Dispatcher remove_dispatcher;
     Glib::Dispatcher chat_dispatcher;
     Glib::Dispatcher error_dispatcher;
 
     std::queue<uint64_t> open_queue;
     std::queue<uint64_t> connect_queue;
     std::queue<uint64_t> disconnect_queue;
+    std::queue<uint64_t> add_queue;
+    std::queue<uint64_t> remove_queue;
     std::queue<std::pair<uint64_t, std::string>> chat_queue;
     std::queue<std::string> error_queue;
 
     std::mutex open_mutex;
     std::mutex connect_mutex;
     std::mutex disconnect_mutex;
+    std::mutex add_mutex;
+    std::mutex remove_mutex;
     std::mutex chat_mutex;
     std::mutex error_mutex;
 
@@ -84,6 +99,8 @@ private:
     void open_callback();
     void connect_callback();
     void disconnect_callback();
+    void add_callback();
+    void remove_callback();
     void chat_callback();
     void error_callback();
 
